@@ -20,13 +20,33 @@ export function tally(counts = {}) {
   return parts.filter(([n]) => n).map(([n, word]) => `${n} ${word}`).join(' · ') || 'nothing to check'
 }
 
+/** "2026-11-16 06:00:00 UTC" from the server's ISO time, whichever way it writes the offset
+ * ("Z" or "+00:00"); the text as given if it is not a time. */
+export function readAt(iso) {
+  const t = new Date(iso)
+  return Number.isNaN(t.getTime()) ? String(iso) : `${t.toISOString().slice(0, 19).replace('T', ' ')} UTC`
+}
+
 export default function CustodyBalance({ result }) {
   const caseId = result?.case_id
   const [data, setData] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  // Open on arrival when the last check found a mismatch; after that the officer decides,
+  // so a new check never folds the panel away under the button they just pressed.
+  const [open, setOpen] = useState(false)
 
-  useEffect(() => { if (caseId) fetchCustodyBalance(caseId).then(setData).catch(() => {}) }, [caseId])
+  useEffect(() => {
+    if (!caseId) return undefined
+    let live = true
+    setData(null)
+    fetchCustodyBalance(caseId).then((d) => {
+      if (!live) return
+      setData(d)
+      setOpen(Boolean(d?.check?.counts?.mismatch))
+    }).catch(() => {})
+    return () => { live = false }
+  }, [caseId])
   if (!caseId || !data?.enabled) return null
 
   async function check() {
@@ -37,13 +57,13 @@ export default function CustodyBalance({ result }) {
   const c = data.check
 
   return (
-    <details className="card sec custody-balance" open={Boolean(c?.counts?.mismatch)}>
+    <details className="card sec custody-balance" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary>
         <span className="micro">Custody balances · {c ? tally(c.counts) : 'not checked yet'}</span>
         <span className="note">each custody address read on chain against the register</span>
       </summary>
       <div className="body requests-panel">
-        {c && <p className="note">Read {String(c.checked_at).replace('T', ' ').replace('Z', ' UTC')}. A balance is a moment: read it again before relying on it.</p>}
+        {c && <p className="note">Read {readAt(c.checked_at)}. A balance is a moment: read it again before relying on it.</p>}
         {c?.results.map((r, i) => (
           <div className={`cb-row ${r.status}`} key={i} role="group" aria-label={`${r.asset} at ${r.address || 'no address'}: ${VERDICT[r.status] ?? r.status}`}>
             <div className="top">
