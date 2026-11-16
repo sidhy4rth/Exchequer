@@ -1,0 +1,3 @@
+/* NcrpPortalLinks.jsx: the portal and 1930 links beside an NCRP number. */
+.ncrp-links { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin: 0; }
+.ncrp-links a { display: inline-flex; align-items: center; min-height: 24px; text-decoration: underline; text-underline-offset: 2px; }

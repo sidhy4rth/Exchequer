@@ -3,9 +3,9 @@
 - **Feature**: a case bundle whose report PDF was refused (429) no longer uses up a bundle from the hourly limit
 - **Issue**: #255
 - **Branch**: `fix/bundle-429-refund`
-- **Current**: Sidhyarth
+- **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: PR open, ready for merge
+- **Status**: merged in #256 (`6f82ef32`)
 
 ## Done
 
@@ -24,7 +24,7 @@
 
 ## Next
 
-1. Merge the PR once CI is green.
+1. None. (~~Merge the PR once CI is green~~: merged in #256.)
 
 ## Open questions
 

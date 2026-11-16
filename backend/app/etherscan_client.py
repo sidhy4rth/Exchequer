@@ -212,6 +212,17 @@ class EtherscanConfigError(EtherscanError):
     """Raised when no API key is configured."""
 
 
+class ProviderUnavailableError(EtherscanError):
+    """Every retry of a transient failure -- HTTP 429, a server error, a
+    timeout or a reset -- failed too. `rate_limited` is True when the last
+    one was a refusal (HTTP 429): the provider was there, but would not
+    answer yet. A later read may well succeed (prorata.estimate re-reads)."""
+
+    def __init__(self, message: str, rate_limited: bool = False) -> None:
+        super().__init__(message)
+        self.rate_limited = rate_limited
+
+
 class ProviderResponseError(EtherscanError):
     """A provider answered with something Exchequer cannot read: the wrong JSON
     shape, a field that should be hex and is not. A provider failure like any
@@ -602,6 +613,7 @@ class EtherscanClient:
             return cached
 
         last_error: Exception | None = None
+        refused = False  # the last transient failure was HTTP 429
 
         for attempt in range(self.max_retries + 1):
             spend("etherscan", self._meter_key, 1, self.budget)  # the case's clock and request budget, every attempt
@@ -612,6 +624,7 @@ class EtherscanClient:
                 raise ProviderResponseError(f"Etherscan response too large: {exc}") from exc
             except httpx.RequestError as exc:  # DNS failure, timeout, reset...
                 last_error = EtherscanError(f"Network error contacting Etherscan: {exc}")
+                refused = False
                 self._backoff(attempt, reason=str(exc))
                 continue
 
@@ -620,6 +633,7 @@ class EtherscanClient:
                 last_error = EtherscanError(
                     f"Etherscan returned HTTP {response.status_code}"
                 )
+                refused = response.status_code == 429
                 if response.status_code == 429:
                     self._pacer.penalize()
                 self._backoff(attempt, reason=f"HTTP {response.status_code}")
@@ -692,8 +706,9 @@ class EtherscanClient:
 
         if isinstance(last_error, EtherscanRateLimitError):
             raise last_error
-        raise EtherscanError(
-            f"Etherscan request failed after {self.max_retries + 1} attempts: {last_error}"
+        raise ProviderUnavailableError(
+            f"Etherscan request failed after {self.max_retries + 1} attempts: {last_error}",
+            rate_limited=refused,
         )
 
     def _backoff(self, attempt: int, reason: str) -> None:

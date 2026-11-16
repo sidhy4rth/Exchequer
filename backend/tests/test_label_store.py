@@ -566,3 +566,86 @@ def test_a_build_counts_the_mixer_tags_it_could_not_pin(tmp_path):
         w.writerows(rows)
     report = build(src, tmp_path / "label_store.db")
     assert report["rows"] == 2 and report["unpinned_mixers"] == 1
+
+
+# -- the overlap with the risk files, recorded at build (#346) ---------------------------
+FROZEN_ROW = row(address=SCAMMER, chain="ethereum", category="stablecoin freeze", entity_or_incident="USDT",
+                 sources="USDT0 contract freeze events (on-chain replay)")
+OFAC_ENTRY = {SCAMMER: {"category": SANCTIONED, "entity": "OFAC SDN", "label": "OFAC SDN", "source": "OFAC"}}
+
+
+def overlap_store(tmp_path, rows=(FROZEN_ROW,), *, lists=None, meta=None):
+    src = tmp_path / "overlap.csv"
+    with open(src, "w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=FIELDS)
+        w.writeheader()
+        w.writerows(rows)
+    out = tmp_path / "overlap.db"
+    build(src, out, risk_lists=lists if lists is not None else {"ethereum": list(OFAC_ENTRY)})
+    if meta is not None:  # rewrite it, as an older or damaged build left it
+        db = sqlite3.connect(out)
+        db.execute("DELETE FROM meta WHERE key='list_overlap'")
+        if meta:
+            db.execute("INSERT INTO meta VALUES ('list_overlap', ?)", (meta,))
+        db.commit()
+        db.close()
+    return LabelStore(out)
+
+
+def test_an_address_a_file_and_the_store_both_name_is_counted_once(tmp_path):
+    store = overlap_store(tmp_path)
+    counts = RiskMatcher(OFAC_ENTRY, chain="ethereum", store=store).counts_by_category()
+    # Under the file's category, the one a trace shows; the store's row is not counted again.
+    assert (counts[SANCTIONED], counts["frozen"], sum(counts.values())) == (1, 0, 1)
+    # A file that no longer names it: the store row is counted, once.
+    counts = RiskMatcher({}, chain="ethereum", store=store).counts_by_category()
+    assert (counts[SANCTIONED], counts["frozen"], sum(counts.values())) == (0, 1, 1)
+    # Another chain's matcher is not touched by Ethereum's overlap.
+    assert RiskMatcher(OFAC_ENTRY, chain="bsc", store=store).counts_by_category()[SANCTIONED] == 1
+
+
+@pytest.mark.parametrize("meta", ["", "{not json", '{"same_chain": []}'])
+def test_a_store_built_without_the_overlap_counts_as_before(tmp_path, meta):
+    """r9 and older (no meta row), or a damaged one: each overlap counted twice, as today."""
+    store = overlap_store(tmp_path, meta=meta)
+    assert store.list_overlap() is None
+    counts = RiskMatcher(OFAC_ENTRY, chain="ethereum", store=store).counts_by_category()
+    assert (counts[SANCTIONED], counts["frozen"], sum(counts.values())) == (1, 1, 2)
+
+
+def distinct(monkeypatch, store, files_by_chain):
+    from app import risk_matcher
+
+    monkeypatch.setattr(risk_matcher, "get_label_store", lambda: store)
+    monkeypatch.setattr(risk_matcher, "get_risk_matcher",
+                        lambda key: RiskMatcher(files_by_chain.get(key, {}), chain=key, store=store))
+    risk_matcher.distinct_flagged.cache_clear()
+    try:
+        return risk_matcher.distinct_flagged()
+    finally:
+        risk_matcher.distinct_flagged.cache_clear()
+
+
+def test_the_distinct_figure_counts_an_address_once_across_chains_store_and_files(tmp_path, monkeypatch):
+    other = {addr("a11"): {**OFAC_ENTRY[SCAMMER]}}
+    store = overlap_store(tmp_path, [FROZEN_ROW, row(**{**FROZEN_ROW, "chain": "bsc"})],
+                          lists={"ethereum": [SCAMMER, *other], "polygon": [*other]})
+    files = {"ethereum": {**OFAC_ENTRY, **other}, "polygon": other}
+    # SCAMMER (a file entry and store rows on two chains) and addr("a11") (two files): two addresses.
+    assert distinct(monkeypatch, store, files) == {"addresses": 2, "exact": False}
+
+
+def test_the_distinct_figure_is_exact_only_for_the_files_it_was_built_against(tmp_path, monkeypatch):
+    import json
+
+    from app import risk_matcher
+
+    built = overlap_store(tmp_path).list_overlap()
+    for digest, exact in ((risk_matcher.list_files_digest(), True), ("0" * 16, False)):
+        store = overlap_store(tmp_path, meta=json.dumps({**built, "lists_sha256": digest}))
+        assert distinct(monkeypatch, store, {"ethereum": OFAC_ENTRY}) == {"addresses": 1, "exact": exact}
+
+
+def test_no_distinct_figure_without_the_overlap_or_without_a_store(tmp_path, monkeypatch):
+    assert distinct(monkeypatch, overlap_store(tmp_path, meta=""), {"ethereum": OFAC_ENTRY}) is None
+    assert distinct(monkeypatch, None, {"ethereum": OFAC_ENTRY}) is None

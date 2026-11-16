@@ -43,6 +43,11 @@
   - A sent request is flagged for follow-up after 7 days (`FOLLOW_UP_DAYS`), and #124 turns that flag into a "Follow up" task. A letter of request goes through the MHA and a foreign Central Authority and takes months, so 7 days was noise.
   - `freeze_requests.follow_up_days(kind)`: 30 days for `letter-rogatory` (`FOLLOW_UP_DAYS_BY_KIND`), 7 for every other kind. 30 days is an internal reminder interval the team chose, not a legal or MHA deadline.
   - Only the `follow_up` flag in `summary` changed, so the change stays clear of `feat/signoff-binding` (#133). The screens and #124 read the flag the server sends; neither has a 7-day number of its own.
+- **A label-store row's basis (#348, PR #349).** When the case's exchange address came from a label-store exchange
+  row (`matches[].attribution_basis`, set only with `EXCHEQUER_STORE_EXCHANGE_ROWS` on), the Statement of Facts
+  prints `report.basis_lines` right after the claim, as the report and the exchange letter do: the list, and for a
+  deposit row the sweep, worded as an inference from public records that only the exchange can confirm. Without the
+  field the draft is byte for byte as before (`backend/tests/test_letter_of_request_store_basis.py`, SHA-256 pin).
 
 ## Decisions
 

@@ -117,12 +117,17 @@ def keep_previous(kept: dict[str, dict], previous: dict[str, dict], dropped: set
 
     A row from an exchange's own proof-of-reserves list (source "por:...",
     scripts/import_por_tron_labels.py) is first-party and not this script's to
-    replace, so it always stays as it was. So does an OKX wallet from OKX's PoR
-    file that scripts/classify_okx_tron_wallets.py classed (a `sweep_basis` row)."""
+    replace, so it always stays as it was. A `sweep_basis` row is different: the
+    address is in OKX's PoR file, but its class (OKX's own wallet) is Exchequer's,
+    from scripts/classify_okx_tron_wallets.py. A TronScan tag does not replace it,
+    but like any row that is not first-party it is dropped when its address is in
+    `dropped` (its tag is now classed not-an-exchange), so a wrongly classed
+    wallet can still be removed by re-seeding."""
     retained = 0
     for address, meta in previous.items():
-        first_party = str(meta.get("source", "")).startswith("por:") or "sweep_basis" in meta
-        if first_party or (address not in kept and address not in dropped):
+        first_party = str(meta.get("source", "")).startswith("por:")
+        classed = "sweep_basis" in meta and address not in dropped
+        if first_party or classed or (address not in kept and address not in dropped):
             kept[address] = meta
             retained += 1
     return retained

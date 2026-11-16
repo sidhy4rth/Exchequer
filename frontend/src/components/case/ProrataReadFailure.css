@@ -1,0 +1,6 @@
+/* A read that failed, not a finding: said in words, set off by a plain rule. */
+.prorata-read-failure {
+  margin-top: 4px; padding-left: 8px; border-left: 2px solid var(--line-strong);
+  color: var(--text-2);
+}
+.prorata-read-failure strong { color: var(--text); font-weight: 600; }

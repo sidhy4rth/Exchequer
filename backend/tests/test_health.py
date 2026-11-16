@@ -53,6 +53,8 @@ def test_chains_lists_what_the_console_needs(client):
     assert body["max_depth"] == config.TRACE_MAX_DEPTH
     for chain in body["chains"].values():
         assert {"key", "name", "ready", "assets", "address_family", "exchange_labels", "risk_labels"} <= set(chain)
+    # Only a store whose build recorded its overlap with the files has it (#346); the tests run without one.
+    assert body["flagged_distinct"] is None
 
 
 def test_chains_never_says_how_the_server_is_configured(client, monkeypatch):

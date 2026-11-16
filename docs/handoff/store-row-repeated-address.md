@@ -5,7 +5,7 @@
 - **Branch**: `fix/store-row-repeated-address`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: PR open, ready; flag `EXCHEQUER_STORE_EXCHANGE_ROWS` stays off
+- **Status**: merged in #275 (`70825d92`); flag `EXCHEQUER_STORE_EXCHANGE_ROWS` stays off
 
 ## Done
 
@@ -22,7 +22,7 @@
 
 ## Next
 
-1. Merge once CI is green.
+1. None. (~~Merge once CI is green~~: merged in #275.)
 
 ## Open questions
 
