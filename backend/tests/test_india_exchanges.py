@@ -38,10 +38,15 @@ NANSEN_LIST = ("https://web.archive.org/web/20221124171104id_/https://portfolio.
                "_app-19aac72a6c43560a.js")
 UNOCOIN_POST = ("https://web.archive.org/web/20230928071351id_/https://blog.unocoin.com/2023/07/05/"
                 "unocoins-proof-of-reserves-audit-june-2023/")
+# Round 4: the second page of WazirX's own proof-of-reserves data, read from WazirX's server (the Internet
+# Archive holds only the first page), with the SHA-256 of the response as read.
+WAZIRX_PAGE_2 = "https://x.wazirx.com/api/v2/wazirx-wallet-addresses?limit=30&page=2"
+WAZIRX_PAGE_2_SHA256 = "4f6b95a9551986a2a05fd164c49d07b9510c2e83e830eb9a8cb3c26e4b72ad33"
 SOURCE = re.compile(r"https://(etherscan\.io|polygonscan\.com)/address/0x[0-9a-f]{40}$"
                     r"|https://coinswitch\.co/building-blocks/[a-z0-9-]+/$"
                     r"|https://web\.archive\.org/web/\d{14}/https://x\.wazirx\.com/api/v2/wazirx-wallet-addresses\?limit=30&page=1$"
-                    r"|" + re.escape(NANSEN_LIST) + "$" + r"|" + re.escape(UNOCOIN_POST) + "$")
+                    r"|" + re.escape(NANSEN_LIST) + "$" + r"|" + re.escape(UNOCOIN_POST) + "$"
+                    r"|" + re.escape(WAZIRX_PAGE_2) + "$")
 # CoinDCX's own post (24 Nov 2022) naming the Nansen Portfolio list as the wallet list it published.
 COINDCX_STATEMENT = ("https://web.archive.org/web/20221125081834id_/https://coindcx.com/blog/announcements/"
                      "the-currency-of-trust-at-coindcx-transparency/")
@@ -145,6 +150,8 @@ def test_an_exchange_s_own_list_is_cited_only_for_that_exchange():
             assert row["exchange"] == expected, row
             if expected == "WazirX":
                 assert "proof-of-reserves" in row["kind"], row
+        if row["source"].startswith("https://x.wazirx.com/"):
+            assert row["exchange"] == "WazirX" and "proof-of-reserves" in row["kind"], row
 
 
 def test_an_archived_first_party_list_carries_its_hash_and_a_third_party_host_the_exchange_s_statement():
@@ -159,7 +166,23 @@ def test_an_archived_first_party_list_carries_its_hash_and_a_third_party_host_th
         else:
             assert "statement" not in row and "statement_sha256" not in row, row
         if "source_sha256" in row:
-            assert row["source"] in (NANSEN_LIST, UNOCOIN_POST), row
+            assert row["source"] in (NANSEN_LIST, UNOCOIN_POST, WAZIRX_PAGE_2), row
+
+
+def test_the_round_4_rows_carry_the_hash_and_snapshot_date_of_wazirx_s_second_page():
+    rows = [r for r in ROWS if r["source"] == WAZIRX_PAGE_2]
+    assert Counter(r["chain"] for r in rows) == {"ethereum": 7, "bsc": 2}
+    for row in rows:
+        assert row["source_sha256"] == WAZIRX_PAGE_2_SHA256 and row["source_date"] == "2024-10-24", row
+        assert row["exchange"] == "WazirX" and row["type"] == "exchange_wallet" and "second page" in row["kind"], row
+        assert "statement" not in row, row
+
+
+def test_a_wazirx_wallet_listed_under_bsc_and_tagged_on_ethereum_is_held_on_both_chains():
+    # WazirX's own list names it under BSC; Etherscan's public name tag names it on Ethereum.
+    address = "0x618ffd1cdabee36ce5992a857cc7463f21272bd7"
+    assert get_matcher("bsc").lookup(address)["label"] == "WazirX: BSC wallet 4"
+    assert get_matcher("ethereum").lookup(address)["label"] == "WazirX: Withdrawals"
 
 
 def test_the_round_3_rows_are_the_ones_the_lists_gave():
