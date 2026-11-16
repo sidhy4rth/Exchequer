@@ -56,6 +56,7 @@ def test_only_a_tag_naming_a_known_exchange_counts():
     ("LCX Exchange", "LCX"), ("ProBit 1", "ProBit Global"), ("Woo X 3", "WOO X"), ("WOO X", "WOO X"),
     ("MoonPay 5", "MoonPay"), ("YouHodler", "YouHodler"), ("YouHodler 1", "YouHodler"),
     ("Changelly", "Changelly"), ("mercuryo", "Mercuryo"), ("Mercuryo 2", "Mercuryo"), ("Beldex", "Beldex"),
+    ("Pionex 1", "Pionex"), ("Pionex: Hot Wallet", "Pionex"),
 ])
 def test_exchanges_fiu_ind_named_read_as_that_exchange(tag, exchange):
     # Names from PIB releases 2173758 and 2308131 and USQ 5805 Annexure-II, spelt as the explorers tag them.
@@ -66,7 +67,7 @@ def test_exchanges_fiu_ind_named_read_as_that_exchange(tag, exchange):
     "MoonPay: Withdrawals 1", "LCX: Company Reserve", "LCX AG: LCX Token", "Woo X: Team", "Woo X: Treasury",
     "WOO X: Staking Cold 1", "WOO X: Deployer", "Paxful (Fake)", "CEX.IO Scam", "Phish: MoonPay",
     "Changelly (Fake)", "Fake_Changelly", "YouHodler: Treasury", "Mercuryo: Deployer", "Beldex: BDX Token",
-    "Phish: Mercuryo",
+    "Phish: Mercuryo", "Pionex (Fake)", "Fake_Pionex", "Pionex: Deployer", "Phish: Pionex",
 ])
 def test_their_other_tags_and_lookalikes_name_no_exchange(tag):
     assert exchange_for_tag(tag) is None

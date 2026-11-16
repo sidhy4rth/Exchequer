@@ -33,13 +33,14 @@ FIU = json.loads((Path(config.DATA_DIR) / fiu_ind_status.STATUS_FILE).read_text(
 KEYS = {"address", "chain", "exchange", "label", "type", "kind", "source", "source_date", "retrieved_on"}
 BATCHES = {1: {"BingX", "LBank", "XT.com", "Phemex", "Bitrue"},
            2: {"MoonPay", "WOO X", "Paxful", "ProBit Global", "LCX", "CEX.IO"},
-           3: {"YouHodler", "Changelly", "Mercuryo", "Beldex"}}
-NAMED = BATCHES[1] | BATCHES[2] | BATCHES[3]
+           3: {"YouHodler", "Changelly", "Mercuryo", "Beldex"},
+           4: {"Pionex"}}
+NAMED = BATCHES[1] | BATCHES[2] | BATCHES[3] | BATCHES[4]
 USQ_5805 = "https://sansad.in/getFile/loksabhaquestions/annex/187/AU5805_lMTYNK.pdf?source=pqals"
 # Where FIU-IND's action against each is recorded, and its date (data/fiu_ind_status.json _meta.rule).
 PIB = {"BingX": "2173758", "LBank": "2173758", "Phemex": "2173758", "Bitrue": "2173758", "XT.com": "2308131",
        "Paxful": "2173758", "CEX.IO": "2173758", "LCX": "2173758", "ProBit Global": "2173758", "WOO X": "2308131",
-       "YouHodler": "2173758", "Changelly": "2173758"}
+       "YouHodler": "2173758", "Changelly": "2173758", "Pionex": "2308131"}
 ACTION = {**{name: (f"https://www.pib.gov.in/PressReleasePage.aspx?PRID={pib}",
                     {"2173758": "2025-10-01", "2308131": "2026-09-09"}[pib]) for name, pib in PIB.items()},
           # Annexure-II only: no PIB release names them.
@@ -163,6 +164,21 @@ def test_no_bitgo_candidate_is_labelled_and_no_bitgo_tag_reads_as_an_exchange():
         assert all(get_matcher(chain_key).lookup(a) is None for a in entry["addresses"])
     assert DOC["_meta"]["batches"]["3"]["examined_none_taken"] == ["BitGo"] and "BitGo" not in FIU
     assert all(exchange_for_tag(t) is None for t in ("BitGo 1", "BitGo: MultiSig 3", "BitGo: Batcher 1"))
+
+
+def test_batch_4_took_only_explorer_tagged_pionex_wallets_and_no_candidate_of_the_four_untagged_exchanges():
+    # Batch 4's candidates came from a listing (DefiLlama-Adapters); only an address whose own explorer page tags it
+    # became a row. No WEEX, Toobit, Bitunix or Zoomex page carried a tag, so those four have no row and no entry.
+    batch = DOC["_meta"]["batches"]["4"]
+    assert batch["examined_none_taken"] == ["WEEX", "Toobit", "Bitunix", "Zoomex"]
+    assert not any(row["exchange"] in batch["examined_none_taken"] for row in ROWS)
+    assert all(name not in FIU for name in batch["examined_none_taken"])
+    pionex = [row for row in ROWS if row["exchange"] == "Pionex"]
+    assert {row["chain"] for row in pionex} == {"ethereum"} and len(pionex) == 5
+    assert {row["retrieved_on"] for row in pionex} == {"2026-11-16"}
+    (untagged,) = [e for e in DOC["_meta"]["left_out"] if e["chain"] == "ethereum" and e["why"].startswith("WEEX")]
+    assert len(untagged["addresses"]) == 39 and "0x7eb87a95948348d6ec7231b52f61281e01d53941" in untagged["addresses"]
+    assert all(exchange_for_tag(t) is None for t in ("Bitunix 1", "Zoomex"))  # not added to CANONICAL
 
 
 # -- each exchange's FIU-IND entry ---------------------------------------------------------

@@ -1,13 +1,13 @@
 {
  "_meta": {
-  "description": "Wallets of exchanges FIU-IND acted against (data/fiu_ind_status.json) that had no wallet in the label files, so their FIU-IND note could never appear on a trace. Batch 1: BingX, LBank, XT.com, Phemex and Bitrue. Batch 2: MoonPay, WOO X, Paxful, ProBit Global, LCX and CEX.IO. Batch 3: YouHodler, Changelly, Mercuryo and Beldex. Every row is also in that chain's exchange label file (config.Chain.labels_path) as {exchange, label, type}, which is what the matcher reads; this file records where each came from.",
-  "provenance": "The explorer's own public name tag on the address page (etherscan.io/address/<a>, polygonscan.com/address/<a>), read from the page title without an API key, as data/india_exchanges.json round 1 reads it; source_date is the page's own 'As at' time and retrieved_on the UTC day it was read (15 Nov 2026 UTC, 16 Nov IST). Candidate addresses came from dawsbot/eth-labels @ 14247ba8cf4686b747938248bee34c66089fa9d9 (data/csv/accounts.csv, tags whose head names one of the exchanges of that batch); a candidate became a row only if the explorer page for that chain carries a tag that app/tron_tags.exchange_for_tag reads as that exchange and that is not infrastructure. The label is the tag as the page shows it.",
-  "first_party_sources": "No list of its own wallets from any of the five could be read without a browser on 15 Nov 2026: Phemex's proof-of-reserves page (phemex.com/proof-of-reserves) loads its data in the browser only; BingX's public proof-of-reserves repository (github.com/BingX-API/BingX-proof-of-reserves) holds a Merkle-tree verifier, not addresses; no LBank, XT.com or Bitrue wallet list was found (Bitrue's and XT.com's proof-of-reserves URLs answer 404). No government or court document naming a wallet of any of the five was found. Batch 2 (15 Nov 2026 UTC): no wallet list of its own from MoonPay, WOO X, Paxful, ProBit Global, LCX or CEX.IO was read; none was found that loads without a browser. Batch 3 (15 Nov 2026 UTC): no wallet list of its own from YouHodler, Changelly, Mercuryo or Beldex was read.",
+  "description": "Wallets of exchanges FIU-IND acted against (data/fiu_ind_status.json) that had no wallet in the label files, so their FIU-IND note could never appear on a trace. Batch 1: BingX, LBank, XT.com, Phemex and Bitrue. Batch 2: MoonPay, WOO X, Paxful, ProBit Global, LCX and CEX.IO. Batch 3: YouHodler, Changelly, Mercuryo and Beldex. Batch 4: Pionex. Every row is also in that chain's exchange label file (config.Chain.labels_path) as {exchange, label, type}, which is what the matcher reads; this file records where each came from.",
+  "provenance": "The explorer's own public name tag on the address page (etherscan.io/address/<a>, polygonscan.com/address/<a>), read from the page title without an API key, as data/india_exchanges.json round 1 reads it; source_date is the page's own 'As at' time and retrieved_on the UTC day it was read (15 Nov 2026 UTC, 16 Nov IST). Candidate addresses came from dawsbot/eth-labels @ 14247ba8cf4686b747938248bee34c66089fa9d9 (data/csv/accounts.csv, tags whose head names one of the exchanges of that batch); a candidate became a row only if the explorer page for that chain carries a tag that app/tron_tags.exchange_for_tag reads as that exchange and that is not infrastructure. The label is the tag as the page shows it. Batch 4 (16 Nov 2026 UTC) read the pages the same way; its candidates came from DefiLlama/DefiLlama-Adapters @ 78d0df2e4920dcdd928a01075fab5a528f79cf3f (cex/index.js entries 'pionex-cex', 'toobit', 'bitunix-cex', 'zoomex-cex', and cex/weex-cex.js), because dawsbot/eth-labels has no candidate for the FIU-IND-named exchanges still without wallets. The listing only proposed addresses: a row still needs the explorer's own tag on that chain's page.",
+  "first_party_sources": "No list of its own wallets from any of the five could be read without a browser on 15 Nov 2026: Phemex's proof-of-reserves page (phemex.com/proof-of-reserves) loads its data in the browser only; BingX's public proof-of-reserves repository (github.com/BingX-API/BingX-proof-of-reserves) holds a Merkle-tree verifier, not addresses; no LBank, XT.com or Bitrue wallet list was found (Bitrue's and XT.com's proof-of-reserves URLs answer 404). No government or court document naming a wallet of any of the five was found. Batch 2 (15 Nov 2026 UTC): no wallet list of its own from MoonPay, WOO X, Paxful, ProBit Global, LCX or CEX.IO was read; none was found that loads without a browser. Batch 3 (15 Nov 2026 UTC): no wallet list of its own from YouHodler, Changelly, Mercuryo or Beldex was read. Batch 4 (16 Nov 2026 UTC): no wallet list of its own from Pionex, WEEX, Toobit, Bitunix or Zoomex was read. WEEX's, Toobit's and BTCC's proof-of-reserves pages answer with no address in the page (the data loads in the browser), except one Bitcoin address on WEEX's; WEEX's public GitHub repository (weexpublic/weex-proof-of-reserves-verify) holds a Merkle-tree verifier, not addresses; Bitunix's proof-of-reserves URL answers 404, Zoomex's 403, and Pionex's did not answer.",
   "not_done": "No ownership was inferred: no clustering, no guessing, no address from a listing site alone. BscScan and Arbiscan pages sit behind a bot check and were not read, so nothing was added on BNB Smart Chain or Arbitrum; nothing was added on Tron. Per-customer deposit addresses ('X Dep') were not taken.",
-  "activity": "Every row's explorer page showed at least one transaction on that chain. Each address was also read on 15 Nov 2026 (UTC) through keyless public RPCs (ethereum-rpc.publicnode.com, polygon-bor-rpc.publicnode.com): none holds contract code, except XT.com: Hot Wallet (0xefda0cb7...), whose code is an EIP-7702 delegation (0xef0100 + a delegate address), so it is still an account and is typed exchange_wallet. Batch 2, read the same way on 15 Nov 2026 (UTC): none holds contract code, except MoonPay 7 (0x7afc12c8...) and LCX 1 (0xc0c704bf...), whose code is an EIP-7702 delegation, so they are accounts and typed exchange_wallet; Woo X 4 (0xea319fd7...), a Gnosis Safe proxy, was not taken. Batch 3, read the same way on 15 Nov 2026 (UTC): none of the five addresses taken holds contract code on either chain; every BitGo candidate holds contract code on Ethereum and none was taken.",
-  "collisions": "Checked against every list in backend/data (exchange, India set, risk, sanctions, frozen, threat, gambling, router, privacy, mixer, never-flag), the recorded demos and tests, and the label store of release labels-2026-11-16: no address was already labelled; the one a demo names is left out. Batch 2 was checked the same way, and against the laundering-heuristic validation corpus (data/validation/corpus.json): the one a demo names and the one the corpus uses as a control are left out. Batch 3 was checked the same way, including the validation corpus and the label store of release labels-2026-11-16 (labels, exchange_rows, exchange_deposits): none of the five addresses taken was in any of them; of those left out, one BitGo contract (0x03237183...) is a statement counterparty in a recorded demo.",
+  "activity": "Every row's explorer page showed at least one transaction on that chain. Each address was also read on 15 Nov 2026 (UTC) through keyless public RPCs (ethereum-rpc.publicnode.com, polygon-bor-rpc.publicnode.com): none holds contract code, except XT.com: Hot Wallet (0xefda0cb7...), whose code is an EIP-7702 delegation (0xef0100 + a delegate address), so it is still an account and is typed exchange_wallet. Batch 2, read the same way on 15 Nov 2026 (UTC): none holds contract code, except MoonPay 7 (0x7afc12c8...) and LCX 1 (0xc0c704bf...), whose code is an EIP-7702 delegation, so they are accounts and typed exchange_wallet; Woo X 4 (0xea319fd7...), a Gnosis Safe proxy, was not taken. Batch 3, read the same way on 15 Nov 2026 (UTC): none of the five addresses taken holds contract code on either chain; every BitGo candidate holds contract code on Ethereum and none was taken. Batch 4, read the same way on 16 Nov 2026 (UTC): none of the five Pionex addresses holds contract code on either chain (Ethereum block 26424991).",
+  "collisions": "Checked against every list in backend/data (exchange, India set, risk, sanctions, frozen, threat, gambling, router, privacy, mixer, never-flag), the recorded demos and tests, and the label store of release labels-2026-11-16: no address was already labelled; the one a demo names is left out. Batch 2 was checked the same way, and against the laundering-heuristic validation corpus (data/validation/corpus.json): the one a demo names and the one the corpus uses as a control are left out. Batch 3 was checked the same way, including the validation corpus and the label store of release labels-2026-11-16 (labels, exchange_rows, exchange_deposits): none of the five addresses taken was in any of them; of those left out, one BitGo contract (0x03237183...) is a statement counterparty in a recorded demo. Batch 4 was checked the same way, including the validation corpus, the hunt's never-flag and never-poison lists and the label store of release labels-2026-11-16 (labels, exchange_rows, exchange_deposits): none of the 51 candidate addresses, taken or left out, was in any of them.",
   "counts": {
-   "rows": 149,
+   "rows": 154,
    "by_exchange": {
     "Beldex": 1,
     "BingX": 62,
@@ -20,13 +20,14 @@
     "MoonPay": 15,
     "Paxful": 5,
     "Phemex": 5,
+    "Pionex": 5,
     "ProBit Global": 4,
     "WOO X": 9,
     "XT.com": 16,
     "YouHodler": 3
    },
    "by_chain": {
-    "ethereum": 108,
+    "ethereum": 113,
     "polygon": 41
    }
   },
@@ -270,6 +271,127 @@
      "0x260ee8f2b0c167e0cd6119b2df923fd061dc1093",
      "0x96fc4553a00c117c5b0bed950dd625d1c16dc894"
     ]
+   },
+   {
+    "chain": "ethereum",
+    "why": "Pionex (batch 4): proposed by DefiLlama/DefiLlama-Adapters @ 78d0df2e4920dcdd928a01075fab5a528f79cf3f ('pionex-cex'), but the Etherscan page carries no public name tag; a listing alone is not a source",
+    "addresses": [
+     "0x02104cae462af17739cc4315ef9ac710a9ed22a7",
+     "0x3c22c17501047d862b3a98e296079966aefd8df7",
+     "0x4998cb57364531560f4048213ba9b529ec27f14f",
+     "0x5e483d7803a8b39f0d6792a0431176a91fde6e31",
+     "0x67be8ce27ef8158d51d8593bb5b26eafacc955d9",
+     "0x7175a01564ac4a83dd396e288a2707dee86caf63",
+     "0xbbb72ba600d8493fea284d5fe44919f7b60d53f5"
+    ]
+   },
+   {
+    "chain": "polygon",
+    "why": "Pionex (batch 4): the PolygonScan page carries no public name tag (the five taken are tagged on Etherscan only)",
+    "addresses": [
+     "0x02104cae462af17739cc4315ef9ac710a9ed22a7",
+     "0x28410a70acc5f01e4efe892bcc38b70f3bcf014b",
+     "0x2a8a276019d3ec549ae657c945ef60aab4e33c9b",
+     "0x3c22c17501047d862b3a98e296079966aefd8df7",
+     "0x4608fbf5fd78879ba0a75c6c0b0f5e53e188d3e2",
+     "0x4998cb57364531560f4048213ba9b529ec27f14f",
+     "0x5e483d7803a8b39f0d6792a0431176a91fde6e31",
+     "0x67be8ce27ef8158d51d8593bb5b26eafacc955d9",
+     "0x7175a01564ac4a83dd396e288a2707dee86caf63",
+     "0xa008dc1281aa6bff98b2c253ee8fd759ba918103",
+     "0xbbb72ba600d8493fea284d5fe44919f7b60d53f5",
+     "0xf6d4e5a7c5215f91f59a95065190cca24bf64554"
+    ]
+   },
+   {
+    "chain": "ethereum",
+    "why": "WEEX, Toobit, Bitunix and Zoomex (PIB releases 2308131 and 2173758; batch 4): every candidate, proposed by DefiLlama/DefiLlama-Adapters @ 78d0df2e4920dcdd928a01075fab5a528f79cf3f, was read on its Etherscan page on 16 Nov 2026 UTC and none carries a public name tag; a listing alone is not a source, so none is taken",
+    "addresses": [
+     "0x0010ca201a1915c500479d5ecc474567b0c12e80",
+     "0x047223b0f9429f865c3a1f1fa1302ee02b44c15f",
+     "0x091ae4113d0cdfa7877bda4064bd1d19662170fc",
+     "0x0988533bcb2e747351f08a365b33e46456c965a1",
+     "0x1156c95d8c7d195a5c49e13621dab0bb69de6630",
+     "0x3244609ee06ae8f403003c624314e50e6c2ac01a",
+     "0x3425c58b988ebac68b1e7712b152615beaa84bae",
+     "0x41b8ce8fce54a418d4a523205a6cc50f0c5beff8",
+     "0x425c91fbde3d472279b914b7c4c9142266d35004",
+     "0x431ca183bd6c2fd4a160ac28363d1719f3f12779",
+     "0x504abab033b8ae51cb02fd0ce93a3cda5efd3c64",
+     "0x50956a84fe22aadc2c2f3e551601a2b38117c72d",
+     "0x5875d9b0bba20e3b393aad0c61e2e2d78c375db1",
+     "0x5d75dfc37eff183435e8fe307bcb05b4d2675f37",
+     "0x6f1b82592ff57173cc5308a34da428a53f79a982",
+     "0x6fe39f2831caf58529779efdb73341aa64df50ab",
+     "0x725c2bedfe9185c24faf9965f5ec3f7677d6fcff",
+     "0x76b0ab5067b3be922ef4698390ca8bd5812a5080",
+     "0x7bceb96a8757114d79c7dcd6b52c460202f17d13",
+     "0x7eb87a95948348d6ec7231b52f61281e01d53941",
+     "0x8d773c8a5905284657056226a6d1b6320c2aad4a",
+     "0x93d0391d7b28ab1e01df29e49793795dea01ae16",
+     "0xa0e8c61d1b378c0ec4cffed9382e5b7fe37a9860",
+     "0xb2c9d546b7390ce0ac9d1b6a1f5cacd4bfae6905",
+     "0xb542ffd0cf52e2de84ee0e6ee415fbb4e4183b30",
+     "0xc06263d0b432dcfba27f8a9867e68b49febd9fba",
+     "0xc0f1f047c3c4b52d1e7a54e5583a99c6b3e6d2bb",
+     "0xc3b77c3f5a733986558c91e0faf95f1659b1b9b6",
+     "0xcaf80cfacbef94d37de091093822f2a862adc47f",
+     "0xcb251e4cac6276afd3f498810d52574420a716ab",
+     "0xcb560b760b8b8421f10b9f5bde1e3b6b59ca9523",
+     "0xdf2c499306de58294bde422484c7091bfeca5bde",
+     "0xe7a5d64930fec23cb04fd98eb1f15e94e9c011c5",
+     "0xe7c395aa2465d19c92a7ac7ea6d309d800a8556c",
+     "0xe8288e668e5da525999234a0b9b1271793cab7ea",
+     "0xe955e61fb93b0871953d5c55f8afd416ebaafda4",
+     "0xf4ed2f0994288c7ce3b3537b4fbfff9c4fc2a3ff",
+     "0xfb20aed5f49a2639d1cb3d5b6e3cc8df6cbcf60a",
+     "0xfbb0099dfb0cb61a74d009960b05c8e2713afbce"
+    ]
+   },
+   {
+    "chain": "polygon",
+    "why": "WEEX, Toobit, Bitunix and Zoomex (batch 4; see the Ethereum entry): no PolygonScan page carries a public name tag",
+    "addresses": [
+     "0x0010ca201a1915c500479d5ecc474567b0c12e80",
+     "0x047223b0f9429f865c3a1f1fa1302ee02b44c15f",
+     "0x091ae4113d0cdfa7877bda4064bd1d19662170fc",
+     "0x0988533bcb2e747351f08a365b33e46456c965a1",
+     "0x1156c95d8c7d195a5c49e13621dab0bb69de6630",
+     "0x3244609ee06ae8f403003c624314e50e6c2ac01a",
+     "0x3425c58b988ebac68b1e7712b152615beaa84bae",
+     "0x41b8ce8fce54a418d4a523205a6cc50f0c5beff8",
+     "0x425c91fbde3d472279b914b7c4c9142266d35004",
+     "0x431ca183bd6c2fd4a160ac28363d1719f3f12779",
+     "0x504abab033b8ae51cb02fd0ce93a3cda5efd3c64",
+     "0x50956a84fe22aadc2c2f3e551601a2b38117c72d",
+     "0x5875d9b0bba20e3b393aad0c61e2e2d78c375db1",
+     "0x5d75dfc37eff183435e8fe307bcb05b4d2675f37",
+     "0x6f1b82592ff57173cc5308a34da428a53f79a982",
+     "0x6fe39f2831caf58529779efdb73341aa64df50ab",
+     "0x725c2bedfe9185c24faf9965f5ec3f7677d6fcff",
+     "0x76b0ab5067b3be922ef4698390ca8bd5812a5080",
+     "0x7bceb96a8757114d79c7dcd6b52c460202f17d13",
+     "0x7eb87a95948348d6ec7231b52f61281e01d53941",
+     "0x8d773c8a5905284657056226a6d1b6320c2aad4a",
+     "0x93d0391d7b28ab1e01df29e49793795dea01ae16",
+     "0xa0e8c61d1b378c0ec4cffed9382e5b7fe37a9860",
+     "0xb2c9d546b7390ce0ac9d1b6a1f5cacd4bfae6905",
+     "0xb542ffd0cf52e2de84ee0e6ee415fbb4e4183b30",
+     "0xc06263d0b432dcfba27f8a9867e68b49febd9fba",
+     "0xc0f1f047c3c4b52d1e7a54e5583a99c6b3e6d2bb",
+     "0xc3b77c3f5a733986558c91e0faf95f1659b1b9b6",
+     "0xcaf80cfacbef94d37de091093822f2a862adc47f",
+     "0xcb251e4cac6276afd3f498810d52574420a716ab",
+     "0xcb560b760b8b8421f10b9f5bde1e3b6b59ca9523",
+     "0xdf2c499306de58294bde422484c7091bfeca5bde",
+     "0xe7a5d64930fec23cb04fd98eb1f15e94e9c011c5",
+     "0xe7c395aa2465d19c92a7ac7ea6d309d800a8556c",
+     "0xe8288e668e5da525999234a0b9b1271793cab7ea",
+     "0xe955e61fb93b0871953d5c55f8afd416ebaafda4",
+     "0xf4ed2f0994288c7ce3b3537b4fbfff9c4fc2a3ff",
+     "0xfb20aed5f49a2639d1cb3d5b6e3cc8df6cbcf60a",
+     "0xfbb0099dfb0cb61a74d009960b05c8e2713afbce"
+    ]
    }
   ],
   "batches": {
@@ -304,6 +426,18 @@
     "issue": 358,
     "examined_none_taken": [
      "BitGo"
+    ]
+   },
+   "4": {
+    "exchanges": [
+     "Pionex"
+    ],
+    "issue": 360,
+    "examined_none_taken": [
+     "WEEX",
+     "Toobit",
+     "Bitunix",
+     "Zoomex"
     ]
    }
   }
@@ -1210,6 +1344,61 @@
    "source": "https://etherscan.io/address/0xf7d13c7dbec85ff86ee815f6dcbb3dedac78ca49",
    "source_date": "Nov-15-2026 08:49:26 PM (UTC)",
    "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x28410a70acc5f01e4efe892bcc38b70f3bcf014b",
+   "chain": "ethereum",
+   "exchange": "Pionex",
+   "label": "Pionex 3",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x28410a70acc5f01e4efe892bcc38b70f3bcf014b",
+   "source_date": "Nov-16-2026 03:39:45 AM (UTC)",
+   "retrieved_on": "2026-11-16"
+  },
+  {
+   "address": "0x2a8a276019d3ec549ae657c945ef60aab4e33c9b",
+   "chain": "ethereum",
+   "exchange": "Pionex",
+   "label": "Pionex 1",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x2a8a276019d3ec549ae657c945ef60aab4e33c9b",
+   "source_date": "Nov-16-2026 03:39:52 AM (UTC)",
+   "retrieved_on": "2026-11-16"
+  },
+  {
+   "address": "0x4608fbf5fd78879ba0a75c6c0b0f5e53e188d3e2",
+   "chain": "ethereum",
+   "exchange": "Pionex",
+   "label": "Pionex 4",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x4608fbf5fd78879ba0a75c6c0b0f5e53e188d3e2",
+   "source_date": "Nov-16-2026 03:40:06 AM (UTC)",
+   "retrieved_on": "2026-11-16"
+  },
+  {
+   "address": "0xa008dc1281aa6bff98b2c253ee8fd759ba918103",
+   "chain": "ethereum",
+   "exchange": "Pionex",
+   "label": "Pionex 2",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xa008dc1281aa6bff98b2c253ee8fd759ba918103",
+   "source_date": "Nov-16-2026 03:40:38 AM (UTC)",
+   "retrieved_on": "2026-11-16"
+  },
+  {
+   "address": "0xf6d4e5a7c5215f91f59a95065190cca24bf64554",
+   "chain": "ethereum",
+   "exchange": "Pionex",
+   "label": "Pionex: Hot Wallet",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xf6d4e5a7c5215f91f59a95065190cca24bf64554",
+   "source_date": "Nov-16-2026 03:40:50 AM (UTC)",
+   "retrieved_on": "2026-11-16"
   },
   {
    "address": "0x72e5263ff33d2494692d7f94a758aa9f82062f73",
