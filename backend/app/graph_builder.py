@@ -208,6 +208,7 @@ class TraceResult:
 
 def _choose_branches(
     branches: list[tuple[str, list[Transaction]]], address: str, cfg: TraceConfig, result: TraceResult,
+    is_terminal: Callable[[str], bool] = lambda _addr: False,
 ) -> list[tuple[str, list[Transaction]]]:
     """Which counterparties of `address` the walk follows (brake 2), largest first.
 
@@ -218,6 +219,10 @@ def _choose_branches(
     at least that share of what `address` sent in the window, up to a hard
     safety cap of `max_branches_hard` so one wallet cannot spend the trace's
     API budget. Splitting 40 into twelve parts of 3.33 no longer hides any.
+    A counterparty under the share that `is_terminal` already names (a known
+    exchange or flagged address) is kept too, within the same cap: the walk
+    never expands it, so it costs no read, and leaving it out would hide a
+    direct payment to an exchange or a flagged address from the case (#382).
 
     Either way, what was not followed is recorded in `result.untraced` with
     its value, so a report states the untraced remainder instead of dropping
@@ -237,6 +242,9 @@ def _choose_branches(
         total = sum(value(b) for b in branches)
         carrying = [b for b in branches if total > 0 and value(b) >= cfg.branch_min_share * total]
         kept = carrying[: cfg.max_branches_hard]
+        shared = {counterparty for counterparty, _ in carrying}
+        known = [b for b in branches if b[0] not in shared and is_terminal(b[0])]
+        kept += known[: cfg.max_branches_hard]
         if len(carrying) > len(kept):
             result.note_truncation(
                 f"safety cap of {cfg.max_branches_hard} counterparties per address applied at "
@@ -753,7 +761,7 @@ def build_trace_graph(
 
             # Brake 2: follow the money -- highest total value first.
             branches.sort(key=lambda item: sum(tx.value_native for tx in item[1]), reverse=True)
-            branches = _choose_branches(branches, address, cfg, result)
+            branches = _choose_branches(branches, address, cfg, result, is_terminal)
 
             for counterparty, txs in branches:
                 total_value = sum(tx.value_native for tx in txs)
