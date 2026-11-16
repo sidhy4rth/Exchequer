@@ -557,6 +557,25 @@ describe('the Flow figure\'s stylesheet', () => {
     expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.vflow \*, \.vflow \*::after \{ animation: none !important; transition: none !important; \}/)
   })
 
+  it('keeps the moving lights inside the chart, so the page never scrolls sideways (#377)', () => {
+    // Each light is a stage-wide box that translateX moves along the ribbons;
+    // unclipped, the rest of that box ran past the chart and widened the page.
+    const body = (sel) => rules.find(([s]) => s === sel)?.[1] ?? ''
+    const layer = body('.vf-lights')
+    expect(layer).toMatch(/overflow:\s*(hidden|clip)\b/)
+    // The layer reaches a margin past the stage for the dots' glow, and each
+    // light starts that same margin in, so it spans the stage exactly.
+    const margin = /inset:\s*-(\d+)px/.exec(layer)?.[1]
+    expect(Number(margin)).toBeGreaterThan(0)
+    const light = body('.vf-light')
+    expect(light).toMatch(new RegExp(`left:\\s*${margin}px`))
+    expect(light).toMatch(new RegExp(`top:\\s*${margin}px`))
+    expect(light).toMatch(new RegExp(`width:\\s*calc\\(100% - ${2 * margin}px\\)`))
+    // The margin stays inside the chart card's padding.
+    const pad = /padding:\s*(\d+)px/.exec(body('.vf-chart'))?.[1]
+    expect(Number(margin)).toBeLessThan(Number(pad))
+  })
+
   it('keeps the chosen rule neutral: green is for exchanges and the route', () => {
     // The focus ring is the site's own (styles.css :focus-visible), green everywhere.
     const on = rules.filter(([sel]) => /\.vf-rule/.test(sel)).flatMap(([, body]) => body.split(';')).filter((d) => !/^\s*outline/.test(d))
