@@ -74,7 +74,7 @@ from scripts._label_files import chain_regenerate  # noqa: E402
 from scripts.import_exchange_labels import has_value_history, listed_elsewhere  # noqa: E402
 from scripts.seed_bsc_labels import ACTIVITY_LOOKBACK, bsc_activity  # noqa: E402
 from scripts.seed_tron_labels import CANONICAL as TRON_CANONICAL  # noqa: E402
-from app.tron_tags import clean_tag  # noqa: E402
+from app.tron_tags import WHOLE_DOMAIN, clean_tag  # noqa: E402
 from scripts._tag_words import NOT_CASH_OUT, cleaned  # noqa: E402
 
 DATASET_REPO = "dawsbot/eth-labels"
@@ -140,8 +140,8 @@ SKIP_TAG = _SkipTag()
 def tag_head(tag: str) -> str:
     """'Binance: Hot Wallet 3' -> 'binance', 'Mexc.com 3' -> 'mexc'."""
     head = re.split(r"[:(]| hot| cold| wallet| exchange| deposit", tag, maxsplit=1, flags=re.I)[0]
-    head = re.sub(r"[\s_-]*\d+$", "", head.strip())
-    head = re.sub(r"\.(com|io|net|org)$", "", head.lower())
+    head = re.sub(r"[\s_-]*\d+$", "", head.strip()).lower()
+    head = WHOLE_DOMAIN.get(head) or re.sub(r"\.(com|io|net|org)$", "", head)
     return re.sub(r"[^a-z]", "", head)
 
 

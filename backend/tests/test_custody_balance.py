@@ -351,3 +351,51 @@ def test_g7_custody_3_goes_down_and_up_again_keeping_the_cases():
     assert models.get_case("case-1") is not None
     models.init_db()
     assert "custody_balance_checks" in set(inspect(models._engine).get_table_names())
+
+
+# -- a stored run, as each reader may read it (#371) -----------------------------------------------
+def officer(key, unit, n):
+    return User(id=f"officer-{n}", role="officer", unit="Cyber Cell" if unit else None,
+                owner_hash=ownership.owner_hash(key), demo=False, officer_id=n, unit_id=unit)
+
+
+def test_a_unit_member_does_not_see_results_for_rows_only_the_runners_browser_may_read():
+    alone, in_unit, colleague = officer(ALICE, None, 1), officer(ALICE, 7, 1), officer(BOB, 7, 2)
+    held(amount="100", asset="TRX", who=alone)  # recorded before the officer joined unit 7: theirs alone
+    held(who=in_unit)  # recorded in the unit: the unit reads it
+    client, seen = tron(trc20="635000000", balance=100_000_000)
+    ran = custody_balance.run(in_unit, "case-1", opener=lambda chain: client)
+    assert len(ran["results"]) == 2 and ran["left_out"] == 0 and "left_out_note" not in ran
+    mine = custody_balance.latest(in_unit, "case-1")
+    assert [x["asset"] for x in mine["results"]] == ["TRX", "USDT"] and mine["counts"]["match"] == 2
+    theirs = custody_balance.latest(colleague, "case-1")
+    assert theirs["check_id"] == ran["check_id"]
+    assert [x["asset"] for x in theirs["results"]] == ["USDT"] and "100" not in json.dumps(theirs["results"])
+    assert theirs["counts"] == {"match": 1, "mismatch": 0, "unchecked": 0}
+    assert theirs["left_out"] == 1 and theirs["left_out_note"] == (
+        "1 result of this check is not shown: it counts asset-register rows you cannot read.")
+
+
+def test_a_result_that_counts_any_row_the_reader_cannot_read_is_left_out_whole():
+    alone, in_unit, colleague = officer(ALICE, None, 1), officer(ALICE, 7, 1), officer(BOB, 7, 2)
+    held(amount="35", who=alone)
+    held(amount="600", who=in_unit)  # the same address and asset: one result summing both rows
+    client, _ = tron(trc20="635000000")
+    custody_balance.run(in_unit, "case-1", opener=lambda chain: client)
+    theirs = custody_balance.latest(colleague, "case-1")
+    assert theirs["results"] == [] and theirs["left_out"] == 1  # its sum would show the row they cannot read
+
+
+def test_a_stake_field_of_an_unexpected_shape_leaves_the_result_unchecked_never_an_error():
+    held(amount="1", asset="TRX")
+    for odd in ({"frozenV2": 5}, {"unfrozenV2": "x"}, {"frozen": {"frozen_balance": 1}},
+                {"account_resource": ["x"]}, {"account_resource": {"frozen_balance_for_energy": 3}}):
+        [r] = check(tron(balance=1_000_000, **odd))
+        assert r["status"] == "unchecked" and r["reason"] == (
+            "TronGrid's answer did not have the shape of an account record."), odd
+    held()
+    for odd in ({"USDT": 1}, "x"):
+        client, seen = tron(balance=1_000_000)
+        client._get = lambda path, params, odd=odd: {"data": [{"trc20": odd, "balance": 1_000_000}]}
+        usdt = next(x for x in check((client, seen)) if x["asset"] == "USDT")
+        assert usdt["status"] == "unchecked" and "shape of an account record" in usdt["reason"]  # never read as 0

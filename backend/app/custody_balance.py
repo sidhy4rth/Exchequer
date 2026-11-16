@@ -117,14 +117,28 @@ def _sun(value: Any) -> int:
         raise Unreadable("TronGrid's answer was not a whole-number balance.") from exc
 
 
+NOT_AN_ACCOUNT = "TronGrid's answer did not have the shape of an account record."
+
+
+def _shaped(value: Any, kind: type) -> Any:
+    """`value` when it is absent or of the type TRON's account schema gives it; Unreadable otherwise, so a
+    field of another shape leaves the result unchecked rather than read as nothing (or a server error)."""
+    if value is None:
+        return kind()
+    if not isinstance(value, kind):
+        raise Unreadable(NOT_AN_ACCOUNT)
+    return value
+
+
 def _staked_sun(account: dict[str, Any]) -> int:
     """TRX the account staked, delegated out or is unstaking, in sun (see the module notes for the fields)."""
-    resource = account.get("account_resource") if isinstance(account.get("account_resource"), dict) else {}
-    energy_v1 = resource.get("frozen_balance_for_energy")
-    rows = [(account.get("frozenV2"), "amount"), (account.get("unfrozenV2"), "unfreeze_amount"),
-            (account.get("frozen"), "frozen_balance")]
-    total = sum(_sun(e.get(field)) for entries, field in rows for e in (entries or []) if isinstance(e, dict))
-    total += _sun(energy_v1.get("frozen_balance")) if isinstance(energy_v1, dict) else 0
+    resource = _shaped(account.get("account_resource"), dict)
+    energy_v1 = _shaped(resource.get("frozen_balance_for_energy"), dict)
+    rows = [(_shaped(account.get("frozenV2"), list), "amount"),
+            (_shaped(account.get("unfrozenV2"), list), "unfreeze_amount"),
+            (_shaped(account.get("frozen"), list), "frozen_balance")]
+    total = sum(_sun(e.get(field)) for entries, field in rows for e in entries if isinstance(e, dict))
+    total += _sun(energy_v1.get("frozen_balance"))
     for key in ("delegated_frozenV2_balance_for_bandwidth", "delegated_frozen_balance_for_bandwidth"):
         total += _sun(account.get(key))
     for key in ("delegated_frozenV2_balance_for_energy", "delegated_frozen_balance_for_energy"):
@@ -164,7 +178,7 @@ def _read_raw(client: Any, chain: config.Chain, address: str, token: config.Toke
         if token is None:  # TronGrid leaves `balance` out of an account holding no free TRX
             staked = _staked_sun(account)
             return _sun(account.get("balance", 0)) + staked, "latest block", staked
-        raw = next((entry[token.address] for entry in account.get("trc20") or []
+        raw = next((entry[token.address] for entry in _shaped(account.get("trc20"), list)
                     if isinstance(entry, dict) and token.address in entry), "0")
         return _sun(raw), "latest block", 0
     raise Unreadable("No balance reader for this chain's provider.")
@@ -281,11 +295,20 @@ def _checked_at() -> str:
     return datetime.now(tz=timezone.utc).isoformat(timespec="microseconds")
 
 
-def summary(r: models.CustodyBalanceCheck) -> dict[str, Any]:
+def summary(r: models.CustodyBalanceCheck, readable: set[str] | None = None) -> dict[str, Any]:
+    """The run, as a reader sees it. With `readable` (the asset-register rows the reader may read now),
+    a result that counts any other row is left out whole, since its sum would show that row, and the
+    counts are of what is shown. A run is kept for its unit, but rows can be one browser's alone."""
     results = json.loads(r.results_json or "[]")
+    shown = results if readable is None else [x for x in results if set(x.get("asset_ids") or []) <= readable]
     checked_at = re.sub(r"\.\d+(?=[+-]\d\d:\d\d$|Z$)", "", r.checked_at or "")
-    return {"check_id": r.id, "case_id": r.case_id, "checked_at": checked_at, "checked_by": r.checked_by,
-            "results": results, "counts": counts(results)}
+    out = {"check_id": r.id, "case_id": r.case_id, "checked_at": checked_at, "checked_by": r.checked_by,
+           "results": shown, "counts": counts(shown), "left_out": len(results) - len(shown)}
+    if out["left_out"]:
+        n = out["left_out"]
+        out["left_out_note"] = (f"{n} result{'s' if n > 1 else ''} of this check {'are' if n > 1 else 'is'} not "
+                                f"shown: {'they count' if n > 1 else 'it counts'} asset-register rows you cannot read.")
+    return out
 
 
 def latest(viewer: Any, case_id: str) -> dict[str, Any] | None:
@@ -296,4 +319,9 @@ def latest(viewer: Any, case_id: str) -> dict[str, Any] | None:
         r = s.scalars(select(models.CustodyBalanceCheck).where(
             models.CustodyBalanceCheck.case_id == case_id, _readable(viewer, models.CustodyBalanceCheck))
             .order_by(models.CustodyBalanceCheck.checked_at.desc())).first()
-        return summary(r) if r is not None else None
+        if r is None:
+            return None
+        ids = {i for x in json.loads(r.results_json or "[]") for i in x.get("asset_ids") or []}
+        readable = set(s.scalars(select(models.SeizedAsset.id).where(
+            models.SeizedAsset.id.in_(ids), _readable(viewer, models.SeizedAsset))).all()) if ids else set()
+        return summary(r, readable)
