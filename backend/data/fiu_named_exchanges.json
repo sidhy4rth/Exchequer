@@ -1,29 +1,33 @@
 {
  "_meta": {
-  "description": "Wallets of exchanges FIU-IND acted against (data/fiu_ind_status.json) that had no wallet in the label files, so their FIU-IND note could never appear on a trace. Batch 1: BingX, LBank, XT.com, Phemex and Bitrue. Batch 2: MoonPay, WOO X, Paxful, ProBit Global, LCX and CEX.IO. Every row is also in that chain's exchange label file (config.Chain.labels_path) as {exchange, label, type}, which is what the matcher reads; this file records where each came from.",
+  "description": "Wallets of exchanges FIU-IND acted against (data/fiu_ind_status.json) that had no wallet in the label files, so their FIU-IND note could never appear on a trace. Batch 1: BingX, LBank, XT.com, Phemex and Bitrue. Batch 2: MoonPay, WOO X, Paxful, ProBit Global, LCX and CEX.IO. Batch 3: YouHodler, Changelly, Mercuryo and Beldex. Every row is also in that chain's exchange label file (config.Chain.labels_path) as {exchange, label, type}, which is what the matcher reads; this file records where each came from.",
   "provenance": "The explorer's own public name tag on the address page (etherscan.io/address/<a>, polygonscan.com/address/<a>), read from the page title without an API key, as data/india_exchanges.json round 1 reads it; source_date is the page's own 'As at' time and retrieved_on the UTC day it was read (15 Nov 2026 UTC, 16 Nov IST). Candidate addresses came from dawsbot/eth-labels @ 14247ba8cf4686b747938248bee34c66089fa9d9 (data/csv/accounts.csv, tags whose head names one of the exchanges of that batch); a candidate became a row only if the explorer page for that chain carries a tag that app/tron_tags.exchange_for_tag reads as that exchange and that is not infrastructure. The label is the tag as the page shows it.",
-  "first_party_sources": "No list of its own wallets from any of the five could be read without a browser on 15 Nov 2026: Phemex's proof-of-reserves page (phemex.com/proof-of-reserves) loads its data in the browser only; BingX's public proof-of-reserves repository (github.com/BingX-API/BingX-proof-of-reserves) holds a Merkle-tree verifier, not addresses; no LBank, XT.com or Bitrue wallet list was found (Bitrue's and XT.com's proof-of-reserves URLs answer 404). No government or court document naming a wallet of any of the five was found. Batch 2 (15 Nov 2026 UTC): no wallet list of its own from MoonPay, WOO X, Paxful, ProBit Global, LCX or CEX.IO was read; none was found that loads without a browser.",
+  "first_party_sources": "No list of its own wallets from any of the five could be read without a browser on 15 Nov 2026: Phemex's proof-of-reserves page (phemex.com/proof-of-reserves) loads its data in the browser only; BingX's public proof-of-reserves repository (github.com/BingX-API/BingX-proof-of-reserves) holds a Merkle-tree verifier, not addresses; no LBank, XT.com or Bitrue wallet list was found (Bitrue's and XT.com's proof-of-reserves URLs answer 404). No government or court document naming a wallet of any of the five was found. Batch 2 (15 Nov 2026 UTC): no wallet list of its own from MoonPay, WOO X, Paxful, ProBit Global, LCX or CEX.IO was read; none was found that loads without a browser. Batch 3 (15 Nov 2026 UTC): no wallet list of its own from YouHodler, Changelly, Mercuryo or Beldex was read.",
   "not_done": "No ownership was inferred: no clustering, no guessing, no address from a listing site alone. BscScan and Arbiscan pages sit behind a bot check and were not read, so nothing was added on BNB Smart Chain or Arbitrum; nothing was added on Tron. Per-customer deposit addresses ('X Dep') were not taken.",
-  "activity": "Every row's explorer page showed at least one transaction on that chain. Each address was also read on 15 Nov 2026 (UTC) through keyless public RPCs (ethereum-rpc.publicnode.com, polygon-bor-rpc.publicnode.com): none holds contract code, except XT.com: Hot Wallet (0xefda0cb7...), whose code is an EIP-7702 delegation (0xef0100 + a delegate address), so it is still an account and is typed exchange_wallet. Batch 2, read the same way on 15 Nov 2026 (UTC): none holds contract code, except MoonPay 7 (0x7afc12c8...) and LCX 1 (0xc0c704bf...), whose code is an EIP-7702 delegation, so they are accounts and typed exchange_wallet; Woo X 4 (0xea319fd7...), a Gnosis Safe proxy, was not taken.",
-  "collisions": "Checked against every list in backend/data (exchange, India set, risk, sanctions, frozen, threat, gambling, router, privacy, mixer, never-flag), the recorded demos and tests, and the label store of release labels-2026-11-16: no address was already labelled; the one a demo names is left out. Batch 2 was checked the same way, and against the laundering-heuristic validation corpus (data/validation/corpus.json): the one a demo names and the one the corpus uses as a control are left out.",
+  "activity": "Every row's explorer page showed at least one transaction on that chain. Each address was also read on 15 Nov 2026 (UTC) through keyless public RPCs (ethereum-rpc.publicnode.com, polygon-bor-rpc.publicnode.com): none holds contract code, except XT.com: Hot Wallet (0xefda0cb7...), whose code is an EIP-7702 delegation (0xef0100 + a delegate address), so it is still an account and is typed exchange_wallet. Batch 2, read the same way on 15 Nov 2026 (UTC): none holds contract code, except MoonPay 7 (0x7afc12c8...) and LCX 1 (0xc0c704bf...), whose code is an EIP-7702 delegation, so they are accounts and typed exchange_wallet; Woo X 4 (0xea319fd7...), a Gnosis Safe proxy, was not taken. Batch 3, read the same way on 15 Nov 2026 (UTC): none of the five addresses taken holds contract code on either chain; every BitGo candidate holds contract code on Ethereum and none was taken.",
+  "collisions": "Checked against every list in backend/data (exchange, India set, risk, sanctions, frozen, threat, gambling, router, privacy, mixer, never-flag), the recorded demos and tests, and the label store of release labels-2026-11-16: no address was already labelled; the one a demo names is left out. Batch 2 was checked the same way, and against the laundering-heuristic validation corpus (data/validation/corpus.json): the one a demo names and the one the corpus uses as a control are left out. Batch 3 was checked the same way, including the validation corpus and the label store of release labels-2026-11-16 (labels, exchange_rows, exchange_deposits): none of the five addresses taken was in any of them; of those left out, one BitGo contract (0x03237183...) is a statement counterparty in a recorded demo.",
   "counts": {
-   "rows": 142,
+   "rows": 149,
    "by_exchange": {
+    "Beldex": 1,
     "BingX": 62,
     "Bitrue": 2,
     "CEX.IO": 1,
+    "Changelly": 1,
     "LBank": 20,
     "LCX": 3,
+    "Mercuryo": 2,
     "MoonPay": 15,
     "Paxful": 5,
     "Phemex": 5,
     "ProBit Global": 4,
     "WOO X": 9,
-    "XT.com": 16
+    "XT.com": 16,
+    "YouHodler": 3
    },
    "by_chain": {
-    "ethereum": 103,
-    "polygon": 39
+    "ethereum": 108,
+    "polygon": 41
    }
   },
   "left_out": [
@@ -225,6 +229,47 @@
     "addresses": [
      "0xc9f5296eb3ac266c94568d790b6e91eba7d76a11"
     ]
+   },
+   {
+    "chain": "ethereum",
+    "why": "BitGo (USQ 5805 Annexure-II, row 16): every candidate holds contract code (eth_getCode from ethereum-rpc.publicnode.com, 15 Nov 2026 UTC). Nine are tagged as BitGo infrastructure ('MultiSig 2' to 'MultiSig 8', 'Batcher 1', 'WalletSimple Multisig Wallet'); 'BitGo 1' holds the same 3,575-byte code as the MultiSig tags. BitGo's multisig wallet contracts hold funds for the firms that use them, so none is taken and BitGo is not added to app/tron_tags.CANONICAL",
+    "addresses": [
+     "0x0323718324218dcbff7c9f89ba5a5954f61a6c74",
+     "0x0c9b25dfe02b2c89cce86e1a0bd6c04a7aca01b6",
+     "0x294c6f1ec18494abe9f608ecd97a307c80586775",
+     "0x3a5cc8689d1b0cef2c317bc5c0ad6ce88b27d597",
+     "0x6fb3934ee371f5ea06c5f6a71cf7c7c6688fbd8d",
+     "0x758982386d532d977b462f5b80e16928ea6652dc",
+     "0x95eeadde20306a602cba20ae8b4f29a95c5d6405",
+     "0x99126daf078c693d200155e2dd7a668479120745",
+     "0xa5d29237a8f14ff25ab9683c38e64671e3bb5cc8",
+     "0xbd02c51150a4ab6ce97b9de2025644594f3e75b8"
+    ]
+   },
+   {
+    "chain": "polygon",
+    "why": "BitGo (see the Ethereum entry): these PolygonScan pages show no transactions, except 0xbd02c511..., whose page carries no tag and which holds contract code on Polygon; none is taken",
+    "addresses": [
+     "0x0323718324218dcbff7c9f89ba5a5954f61a6c74",
+     "0x0c9b25dfe02b2c89cce86e1a0bd6c04a7aca01b6",
+     "0x294c6f1ec18494abe9f608ecd97a307c80586775",
+     "0x3a5cc8689d1b0cef2c317bc5c0ad6ce88b27d597",
+     "0x6fb3934ee371f5ea06c5f6a71cf7c7c6688fbd8d",
+     "0x758982386d532d977b462f5b80e16928ea6652dc",
+     "0x95eeadde20306a602cba20ae8b4f29a95c5d6405",
+     "0x99126daf078c693d200155e2dd7a668479120745",
+     "0xa5d29237a8f14ff25ab9683c38e64671e3bb5cc8",
+     "0xbd02c51150a4ab6ce97b9de2025644594f3e75b8"
+    ]
+   },
+   {
+    "chain": "polygon",
+    "why": "the explorer page for this chain carries the tag but shows no transactions on this chain",
+    "addresses": [
+     "0x258b7b9a1ba92f47f5f4f5e733293477620a82cb",
+     "0x260ee8f2b0c167e0cd6119b2df923fd061dc1093",
+     "0x96fc4553a00c117c5b0bed950dd625d1c16dc894"
+    ]
    }
   ],
   "batches": {
@@ -248,10 +293,33 @@
      "CEX.IO"
     ],
     "issue": 354
+   },
+   "3": {
+    "exchanges": [
+     "YouHodler",
+     "Changelly",
+     "Mercuryo",
+     "Beldex"
+    ],
+    "issue": 358,
+    "examined_none_taken": [
+     "BitGo"
+    ]
    }
   }
  },
  "rows": [
+  {
+   "address": "0x258b7b9a1ba92f47f5f4f5e733293477620a82cb",
+   "chain": "ethereum",
+   "exchange": "Beldex",
+   "label": "Beldex",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x258b7b9a1ba92f47f5f4f5e733293477620a82cb",
+   "source_date": "Nov-15-2026 09:35:26 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
   {
    "address": "0x065ac3d33fec104fba9f2f4d674afaa7c4ebcf43",
    "chain": "ethereum",
@@ -781,6 +849,17 @@
    "retrieved_on": "2026-11-15"
   },
   {
+   "address": "0x96fc4553a00c117c5b0bed950dd625d1c16dc894",
+   "chain": "ethereum",
+   "exchange": "Changelly",
+   "label": "Changelly",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x96fc4553a00c117c5b0bed950dd625d1c16dc894",
+   "source_date": "Nov-15-2026 09:35:52 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
    "address": "0x0e80abb31ace45ae26f9a2943acaab72e77de9be",
    "chain": "ethereum",
    "exchange": "LBank",
@@ -965,6 +1044,17 @@
    "kind": "exchange wallet (EOA), per the explorer's public name tag",
    "source": "https://etherscan.io/address/0xc0c704bfc375b3fc657bc378b1cfee009194e2b3",
    "source_date": "Nov-15-2026 09:19:20 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x8c8d7c46219d9205f056f28fee5950ad564d7465",
+   "chain": "ethereum",
+   "exchange": "Mercuryo",
+   "label": "mercuryo",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x8c8d7c46219d9205f056f28fee5950ad564d7465",
+   "source_date": "Nov-15-2026 09:35:46 PM (UTC)",
    "retrieved_on": "2026-11-15"
   },
   {
@@ -1386,6 +1476,28 @@
    "retrieved_on": "2026-11-15"
   },
   {
+   "address": "0x260ee8f2b0c167e0cd6119b2df923fd061dc1093",
+   "chain": "ethereum",
+   "exchange": "YouHodler",
+   "label": "YouHodler",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x260ee8f2b0c167e0cd6119b2df923fd061dc1093",
+   "source_date": "Nov-15-2026 09:35:29 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x2f1f7fc76e6cf5ab3e186a2a2fd4fc31952a77cc",
+   "chain": "ethereum",
+   "exchange": "YouHodler",
+   "label": "YouHodler 1",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x2f1f7fc76e6cf5ab3e186a2a2fd4fc31952a77cc",
+   "source_date": "Nov-15-2026 09:35:34 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
    "address": "0x2b3bf74b29f59fb8dda41cf3d6a8da28cf8e7921",
    "chain": "polygon",
    "exchange": "BingX",
@@ -1639,6 +1751,17 @@
    "retrieved_on": "2026-11-15"
   },
   {
+   "address": "0x8c8d7c46219d9205f056f28fee5950ad564d7465",
+   "chain": "polygon",
+   "exchange": "Mercuryo",
+   "label": "mercuryo",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x8c8d7c46219d9205f056f28fee5950ad564d7465",
+   "source_date": "Nov-15-2026 09:35:44 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
    "address": "0x0b5c4a7fcda49e0a8661419bb55b86161a86db2a",
    "chain": "polygon",
    "exchange": "MoonPay",
@@ -1812,6 +1935,17 @@
    "kind": "exchange wallet (EOA), per the explorer's public name tag",
    "source": "https://polygonscan.com/address/0xcab044b301d94875ac1502b73e54d63b0162c70f",
    "source_date": "Nov-15-2026 08:52:06 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x2f1f7fc76e6cf5ab3e186a2a2fd4fc31952a77cc",
+   "chain": "polygon",
+   "exchange": "YouHodler",
+   "label": "YouHodler 1",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x2f1f7fc76e6cf5ab3e186a2a2fd4fc31952a77cc",
+   "source_date": "Nov-15-2026 09:35:33 PM (UTC)",
    "retrieved_on": "2026-11-15"
   }
  ]
