@@ -50,6 +50,7 @@ from .chain_data import open_source
 from .etherscan_client import normalize_address
 from .exchange_matcher import get_matcher
 from .input_rules import plain_text
+from .provider_errors import public_reason
 from .risk_matcher import get_risk_matcher
 
 logger = logging.getLogger(__name__)
@@ -746,7 +747,7 @@ def check_watch(watch_id: str, source: Source = open_source,
     except Exception as exc:  # noqa: BLE001 -- recorded, retried next round
         spent = isinstance(exc, BudgetSpent)
         _finish_check(watch_id, error=f"Not checked: the {exc.reason} is used up." if spent else
-                      f"Could not read the address this round ({type(exc).__name__}).")
+                      f"Could not read the address this round ({public_reason(exc)}).")
         logger.warning("Watch %s: provider failure: %s", watch_id, exc)
         if hook:  # the outbox does not wait for the chain
             _deliver_safely(watch_id, address, chain_key, case_id, post)
