@@ -62,7 +62,7 @@
     "OKX": 95
    }
   },
-  "fiu_named_exchanges": "26 wallets of exchanges FIU-IND acted against that had none here (BingX 17, LBank 5, Phemex 2, XT.com 2) added from data/fiu_named_exchanges.json (15 Nov 2026 UTC), which records each one's source (the explorer's public name tag on the address's page) and what was left out and why."
+  "fiu_named_exchanges": "41 wallets of exchanges FIU-IND acted against that had none here (BingX 17, LBank 5, LCX 1, Mercuryo 1, MoonPay 7, Paxful 2, Phemex 2, ProBit Global 1, WOO X 2, XT.com 2, YouHodler 1) added from data/fiu_named_exchanges.json (15 Nov 2026 UTC; batch 1 #342, batch 2 #354, batch 3 #358), which records each one's source (the explorer's public name tag on the address's page) and what was left out and why."
  },
  "labels": {
   "0x0031e147a79c45f24319dc02ca860cb6142fcba1": {
@@ -1983,6 +1983,81 @@
   "0xcab044b301d94875ac1502b73e54d63b0162c70f": {
    "exchange": "XT.com",
    "label": "XT.com : Hot Wallet",
+   "type": "exchange_wallet"
+  },
+  "0x0b5c4a7fcda49e0a8661419bb55b86161a86db2a": {
+   "exchange": "MoonPay",
+   "label": "MoonPay 5",
+   "type": "exchange_wallet"
+  },
+  "0x1440ec793ae50fa046b95bfeca5af475b6003f9e": {
+   "exchange": "MoonPay",
+   "label": "MoonPay 2",
+   "type": "exchange_wallet"
+  },
+  "0x151b381058f91cf871e7ea1ee83c45326f61e96d": {
+   "exchange": "MoonPay",
+   "label": "MoonPay 4",
+   "type": "exchange_wallet"
+  },
+  "0x17f1a51da68d27c94d2a51d92b27b5bd4718b986": {
+   "exchange": "Paxful",
+   "label": "Paxful 1",
+   "type": "exchange_wallet"
+  },
+  "0x22f6cc8738308a8c92a6a71ea67832463d1fec0d": {
+   "exchange": "MoonPay",
+   "label": "MoonPay 8",
+   "type": "exchange_wallet"
+  },
+  "0x63dfe4e34a3bfc00eb0220786238a7c6cef8ffc4": {
+   "exchange": "WOO X",
+   "label": "WOO X",
+   "type": "exchange_wallet"
+  },
+  "0x777d4627e31863b2a49e2985af46525f21a9846c": {
+   "exchange": "Paxful",
+   "label": "Paxful 3",
+   "type": "exchange_wallet"
+  },
+  "0x7afc12c8dd2e6591581d95586eb2c2a4905a12a9": {
+   "exchange": "MoonPay",
+   "label": "MoonPay 7",
+   "type": "exchange_wallet"
+  },
+  "0xbc4e4069b1cb2fc1256a2bf454ae3affb4e05a4d": {
+   "exchange": "LCX",
+   "label": "LCX Exchange",
+   "type": "exchange_wallet"
+  },
+  "0xd108fd0e8c8e71552a167e7a44ff1d345d233ba6": {
+   "exchange": "MoonPay",
+   "label": "MoonPay 3",
+   "type": "exchange_wallet"
+  },
+  "0xd42f958e1c3e2a10e5d66343c4c9a57726e5b4b6": {
+   "exchange": "MoonPay",
+   "label": "MoonPay 6",
+   "type": "exchange_wallet"
+  },
+  "0xdba24f19bce0f32ea4273faea7c01d7f9d4f91d6": {
+   "exchange": "ProBit Global",
+   "label": "ProBit 4",
+   "type": "exchange_wallet"
+  },
+  "0xe505bf08c03cc0fa4e0fdfa2487e2c11085b3fd9": {
+   "exchange": "WOO X",
+   "label": "Woo X 3",
+   "type": "exchange_wallet"
+  },
+  "0x2f1f7fc76e6cf5ab3e186a2a2fd4fc31952a77cc": {
+   "exchange": "YouHodler",
+   "label": "YouHodler 1",
+   "type": "exchange_wallet"
+  },
+  "0x8c8d7c46219d9205f056f28fee5950ad564d7465": {
+   "exchange": "Mercuryo",
+   "label": "mercuryo",
    "type": "exchange_wallet"
   }
  }

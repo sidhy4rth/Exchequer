@@ -32,6 +32,7 @@ checked here, so read `/health/detail` → `flags` to be sure.
 | `EXCHEQUER_JOB_STOP_UNWATCHED` | #302: stop a background trace job no page has watched for 120 s after its last progress stream closed; nothing saved | #303 | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_STORE_EXCHANGE_ROWS` | #222: name the exchange from exchange rows in the label store (an exchange's own proof-of-reserves list; ADR-0011) | #223 (+#224) | Off in `render.yaml`; the store release `labels-2026-11-16` carries exchange rows (OKX 474,529 Tron; OKX Ethereum 162 own wallets and 4,938 deposit rows that state their basis, ADR-0012; Bitget 10 Ethereum). A sample suggests most of the OKX Tron rows are customer deposit addresses that sweep to OKX, yet they are still typed as OKX's own wallets, so it stays off until they are rebuilt as deposit and own-wallet rows (ADR-0012). Switching it on is its own PR, which also re-records demo 9 (five of its addresses are OKX rows) |
 | `EXCHEQUER_CUSTODY_WALLETS` | Feature 9: custody wallet records and their signing log (never a key) | #129 (+#139, #140, #142) | Off in `render.yaml`; see its section below |
+| `EXCHEQUER_CUSTODY_BALANCE_CHECK` | Feature 9 part 2: read each custody address's balance on chain against the asset register, with the provider evidence | #333 (+ stacked PRs, issue #332) | Off; see its section below |
 | `EXCHEQUER_STATEMENT_IMPORT` | Feature 5: read a bank or exchange statement CSV against a case; save the rows the officer confirms | #146 (+#151, #152, #153, #183, #184) | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_CDR_IMPORT` | Feature 5: read a call detail record CSV against a case; save a summary the officer confirms | #168 (+#172, #173), merged with #146 | Off in `render.yaml`; see its section below |
 | `EXCHEQUER_EXPORT_SCAN` | Feature 2: scan a phone or computer export in the browser for addresses, hashes and seed phrases | #147 (+#154, #155, #156, #164) | Off in `render.yaml`; see its section below |
@@ -158,6 +159,23 @@ and `g7_custody_2` (see the migration note above). Have the unit read
   it means a new record. Is that enough?
 - Must the officer who enters an approval be someone other than the officer who
   entered the proposal? Today one account may propose and enter one approval.
+
+## `EXCHEQUER_CUSTODY_BALANCE_CHECK`: custody balances on chain (feature 9, part 2)
+
+**What it turns on.** A "Custody balances" panel on the Letters tab, under the
+custody wallets. A signed-in officer presses "Check balances on chain now": for
+each asset-register row still held in custody, the address it is held at (its
+linked custody wallet, else its own held-at address and chain) is read through
+that chain's provider (Etherscan, NodeReal or TronGrid; the daily allowance and
+evidence log as for a trace), summed per address and asset, and shown as
+"Matches the register", "Mismatch" (with both amounts and the gap in words) or
+"Not checked" (with why). Each run is stored with the provider's evidence
+(request without the key, SHA-256 of the answer, time). It moves no money.
+
+**Try it** (test officer, test case, an address the unit itself controls): record
+an asset-register row held in custody at that address, run the check, and compare
+the panel's "On chain" figure with the explorer. Audit rows: `custody.balance.view`
+and `custody.balance.check`, whose detail holds the check id and counts only.
 
 ## `EXCHEQUER_STATEMENT_IMPORT`: bank and exchange statements (feature 5, first slice)
 
@@ -494,6 +512,15 @@ annotation to the run ("FIU-IND sources due a re-check"); it says the same if
 the file is unusable. It always exits 0, so it never blocks a merge or turns a
 run red: look for the annotation on the weekly run. When it appears, follow the
 steps below.
+
+GitHub pauses the weekly run on its own: "In a public repository, scheduled
+workflows are automatically disabled when no repository activity has occurred
+in 60 days" (https://docs.github.com/en/actions/how-tos/manage-workflow-runs/disable-and-enable-workflows).
+After 60 quiet days `fiu-staleness.yml` stops running and no warning appears,
+however old `checked_on` is; the pull-request check in `test.yml` still runs
+when a pull request is opened. To turn it back on: Actions → FIU-IND sources
+due → Enable workflow (or `gh workflow enable fiu-staleness.yml`), then run it
+once by hand.
 
 A `checked_on`, `_meta.register.as_of` or fact date that is not a real day
 (e.g. `2026-02-30`) is caught when the file is read: a bad `checked_on` or

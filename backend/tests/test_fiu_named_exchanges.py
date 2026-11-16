@@ -31,8 +31,19 @@ DOC = json.loads((Path(config.DATA_DIR) / "fiu_named_exchanges.json").read_text(
 ROWS = DOC["rows"]
 FIU = json.loads((Path(config.DATA_DIR) / fiu_ind_status.STATUS_FILE).read_text(encoding="utf-8"))["exchanges"]
 KEYS = {"address", "chain", "exchange", "label", "type", "kind", "source", "source_date", "retrieved_on"}
-FIVE = {"BingX", "LBank", "XT.com", "Phemex", "Bitrue"}
-PIB = {"BingX": "2173758", "LBank": "2173758", "Phemex": "2173758", "Bitrue": "2173758", "XT.com": "2308131"}
+BATCHES = {1: {"BingX", "LBank", "XT.com", "Phemex", "Bitrue"},
+           2: {"MoonPay", "WOO X", "Paxful", "ProBit Global", "LCX", "CEX.IO"},
+           3: {"YouHodler", "Changelly", "Mercuryo", "Beldex"}}
+NAMED = BATCHES[1] | BATCHES[2] | BATCHES[3]
+USQ_5805 = "https://sansad.in/getFile/loksabhaquestions/annex/187/AU5805_lMTYNK.pdf?source=pqals"
+# Where FIU-IND's action against each is recorded, and its date (data/fiu_ind_status.json _meta.rule).
+PIB = {"BingX": "2173758", "LBank": "2173758", "Phemex": "2173758", "Bitrue": "2173758", "XT.com": "2308131",
+       "Paxful": "2173758", "CEX.IO": "2173758", "LCX": "2173758", "ProBit Global": "2173758", "WOO X": "2308131",
+       "YouHodler": "2173758", "Changelly": "2173758"}
+ACTION = {**{name: (f"https://www.pib.gov.in/PressReleasePage.aspx?PRID={pib}",
+                    {"2173758": "2025-10-01", "2308131": "2026-09-09"}[pib]) for name, pib in PIB.items()},
+          # Annexure-II only: no PIB release names them.
+          **{name: (USQ_5805, "2026-03-30") for name in ("MoonPay", "Mercuryo", "Beldex")}}
 SOURCE = {"ethereum": re.compile(r"https://etherscan\.io/address/(0x[0-9a-f]{40})$"),
           "polygon": re.compile(r"https://polygonscan\.com/address/(0x[0-9a-f]{40})$")}
 AS_AT = re.compile(r"[A-Z][a-z]{2}-\d{2}-\d{4} \d{2}:\d{2}:\d{2} [AP]M \(UTC\)$")
@@ -55,7 +66,7 @@ def test_every_row_has_its_fields_and_its_own_explorer_page_as_source():
     assert ROWS
     for row in ROWS:
         assert set(row) == KEYS, row
-        assert row["exchange"] in FIVE and row["chain"] in SOURCE, row
+        assert row["exchange"] in NAMED and row["chain"] in SOURCE, row
         page = SOURCE[row["chain"]].match(row["source"])
         assert page and page.group(1) == row["address"], row
         assert AS_AT.match(row["source_date"]) and DAY.match(row["retrieved_on"]), row
@@ -81,7 +92,8 @@ def test_the_counts_in_the_meta_are_the_rows():
     assert counts["rows"] == len(ROWS)
     assert counts["by_exchange"] == dict(Counter(row["exchange"] for row in ROWS))
     assert counts["by_chain"] == dict(Counter(row["chain"] for row in ROWS))
-    assert set(counts["by_exchange"]) == FIVE
+    assert set(counts["by_exchange"]) == NAMED
+    assert {int(k): set(v["exchanges"]) for k, v in DOC["_meta"]["batches"].items()} == BATCHES
 
 
 # -- agreement with the label files, no collisions ---------------------------------------
@@ -126,14 +138,40 @@ def test_the_xt_com_wallet_xt_said_was_drained_in_november_2024_is_not_labelled(
         assert get_matcher(chain_key).lookup("0xdb3ded7731c781224ec292e2163d9554c094fd7c") is None
 
 
+def test_the_lcx_wallet_drained_in_the_january_2022_hack_is_not_labelled():
+    # It sent the 8 Jan 2022 transfers to the address threat_labels.json labels "LCX Hacker" (left_out in the meta).
+    drained = "0x4631018f63d5e31680fb53c11c9e1b11f1503e6f"
+    assert any(drained in e["addresses"] and "LCX Hacker" in e["why"] for e in DOC["_meta"]["left_out"])
+    for chain_key in SOURCE:
+        assert get_matcher(chain_key).lookup(drained) is None
+
+
+def test_a_validation_control_wallet_and_a_multisig_contract_are_not_labelled():
+    corpus = (Path(config.DATA_DIR) / "validation" / "corpus.json").read_text(encoding="utf-8").lower()
+    assert all(row["address"] not in corpus for row in ROWS)
+    control, safe = "0x2957ea6d4f06bc2badfb2958c65fc7d1be5461b1", "0xea319fd75766f5180018f8e760f51c3d3c457496"
+    assert control in corpus
+    for chain_key in SOURCE:
+        assert get_matcher(chain_key).lookup(control) is None and get_matcher(chain_key).lookup(safe) is None
+
+
+def test_no_bitgo_candidate_is_labelled_and_no_bitgo_tag_reads_as_an_exchange():
+    # Every BitGo candidate holds contract code: its multisig wallets hold funds for the firms that use them.
+    (entry,) = [e for e in DOC["_meta"]["left_out"] if e["chain"] == "ethereum" and e["why"].startswith("BitGo")]
+    assert len(entry["addresses"]) == 10 and "0xbd02c51150a4ab6ce97b9de2025644594f3e75b8" in entry["addresses"]
+    for chain_key in SOURCE:
+        assert all(get_matcher(chain_key).lookup(a) is None for a in entry["addresses"])
+    assert DOC["_meta"]["batches"]["3"]["examined_none_taken"] == ["BitGo"] and "BitGo" not in FIU
+    assert all(exchange_for_tag(t) is None for t in ("BitGo 1", "BitGo: MultiSig 3", "BitGo: Batcher 1"))
+
+
 # -- each exchange's FIU-IND entry ---------------------------------------------------------
-@pytest.mark.parametrize("name", sorted(FIVE))
-def test_each_exchange_has_its_fiu_ind_entry_from_the_pib_release_that_names_it(name):
+@pytest.mark.parametrize("name", sorted(NAMED))
+def test_each_exchange_has_its_fiu_ind_entry_from_the_source_that_names_it(name):
     entry = FIU[name]
     assert entry["registered"] is False and entry["penalties"] == [] and "listed_as" not in entry
     (action,) = entry["actions"]
-    assert action["url"] == f"https://www.pib.gov.in/PressReleasePage.aspx?PRID={PIB[name]}"
-    assert action["date"] == {"2173758": "2025-10-01", "2308131": "2026-09-09"}[PIB[name]]
+    assert (action["url"], action["date"]) == ACTION[name]
 
 
 # -- a trace that reaches one names the exchange --------------------------------------
@@ -165,7 +203,7 @@ def trace(monkeypatch):
     return run
 
 
-@pytest.mark.parametrize("exchange", sorted(FIVE))
+@pytest.mark.parametrize("exchange", sorted(NAMED))
 def test_a_trace_that_reaches_one_is_attributed_to_that_exchange_with_its_fiu_ind_note(trace, monkeypatch, exchange):
     row = next(r for r in ROWS if r["chain"] == "ethereum" and r["exchange"] == exchange)
     result = trace([_tx(SEED, HOP, 5.0, T + 10), _tx(HOP, row["address"], 5.0, T + 20)])
@@ -174,7 +212,7 @@ def test_a_trace_that_reaches_one_is_attributed_to_that_exchange_with_its_fiu_in
     fiu_ind_status.clear_cache()
     note = fiu_ind_status.note(result["exchange"])
     fiu_ind_status.clear_cache()
-    assert note and f"PRID={PIB[exchange]}" in " ".join(note["sources"])
+    assert note and ACTION[exchange][0] in " ".join(note["sources"])
     assert note["text"].startswith(exchange) and "was not on FIU-IND's list of registered VDA service" in note["text"]
 
 

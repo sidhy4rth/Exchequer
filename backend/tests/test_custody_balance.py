@@ -13,16 +13,18 @@ from datetime import date
 
 import httpx
 import pytest
-from sqlalchemy import create_engine
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, select
 
-from app import assets, config, custody, custody_balance, models, ownership
+from app import accounts, assets, config, custody, custody_balance, models, ownership, rate_limit
 from app.auth import User
 from app.chain_data import ProviderNotConfiguredError
 from app.etherscan_client import EtherscanClient
+from app.main import app
 from app.nodereal_client import NoderealClient
 from app.tron_client import TronClient
 
-ALICE = "a" * 32
+ALICE, BOB = "a" * 32, "b" * 32
 TX = "ab" * 32
 CUSTODY = "TXgo8gtf6bPQURfHftYWPRv1QPuLQaBBVU"  # the custody address test_assets.py uses
 EVM = "0x" + "ab" * 20  # a well-formed test address, not anyone's wallet
@@ -79,6 +81,10 @@ def check(*clients, who=None):
         key = {TronClient: "tron", EtherscanClient: "ethereum", NoderealClient: "bsc"}[type(c[0])]
         by_chain[key] = c[0]
     return custody_balance.read_all(who or viewer(), "case-1", opener=lambda chain: by_chain[chain.key])
+
+
+def stored(c, who=None):
+    return custody_balance.run(who or viewer(), "case-1", opener=lambda chain: c[0])
 
 
 # -- what is compared ------------------------------------------------------------------------------
@@ -254,3 +260,80 @@ def test_one_run_reads_at_most_max_reads_pairs(monkeypatch):
     first, second = check((client, seen))
     assert first["status"] == "match" and second["status"] == "unchecked" and "at most 1" in second["reason"]
     assert len(seen) == 1
+
+
+def test_a_run_is_stored_and_only_its_owner_reads_the_newest_one():
+    held()
+    first = stored(tron(trc20="1"))
+    second = stored(tron(trc20="635000000"))
+    assert custody_balance.latest(viewer(), "case-1")["check_id"] in (first["check_id"], second["check_id"])
+    assert custody_balance.latest(viewer(BOB), "case-1") is None
+    with models.session() as s:
+        assert len(s.scalars(select(models.CustodyBalanceCheck)).all()) == 2
+
+
+# -- routes ---------------------------------------------------------------------------------------
+H = {ownership.OWNER_HEADER: ALICE}
+PW = "officer-password-long-2"
+
+
+@pytest.fixture
+def client(monkeypatch):
+    monkeypatch.setattr(accounts, "SCRYPT_N", 2**4)
+    for limiter in rate_limit.LOGIN_LIMITS:
+        limiter.reset()
+    rate_limit.request_writes.reset()
+    unit = accounts.create_unit("Cyber Cell North")
+    accounts.create_officer("officer@example.org", "Om Officer", unit.id, "officer", password=PW)
+    c = TestClient(app, base_url="https://testserver")
+    assert c.post("/auth/login", json={"email": "officer@example.org", "password": PW},
+                  headers={accounts.CSRF_HEADER: "1"}).status_code == 200
+    return c
+
+
+def test_switched_off_the_check_says_so_and_refuses_to_run(client, monkeypatch):
+    monkeypatch.setattr(config, "CUSTODY_BALANCE_CHECK", False)
+    assert client.get("/trace/case-1/custody-balance", headers=H).json() == {
+        "case_id": "case-1", "enabled": False, "check": None}
+    assert client.post("/trace/case-1/custody-balance", headers=H).status_code == 403
+
+
+def test_an_officer_runs_a_check_the_demo_caller_cannot_and_the_audit_holds_counts_only(client, monkeypatch):
+    monkeypatch.setattr(config, "CUSTODY_BALANCE_CHECK", True)
+    tron_client, _ = tron(trc20="600000000")
+    monkeypatch.setattr(custody_balance, "open_source", lambda chain: tron_client)
+    assert client.post("/trace/case-1/assets", json={
+        "holder": "custody", "asset": "USDT", "amount": "635", "chain": "tron", "held_at": CUSTODY,
+        "tx_hash": TX, "seized_on": "2026-11-01"}, headers=H).status_code == 201
+    demo = TestClient(app)
+    refused = demo.post("/trace/case-1/custody-balance", headers=H)
+    assert refused.status_code == 403 and "Sign in as an officer" in refused.json()["detail"]
+    offered = demo.get("/trace/case-1/custody-balance", headers=H).json()  # so the panel offers no button
+    assert offered["can_check"] is False and offered["check_note"].startswith("Sign in as an officer")
+    ran = client.post("/trace/case-1/custody-balance", headers=H)
+    assert ran.status_code == 201 and ran.json()["results"][0]["status"] == "mismatch"
+    assert client.post("/trace/no-such-case/custody-balance", headers=H).status_code == 404
+    shown = client.get("/trace/case-1/custody-balance", headers=H).json()
+    assert shown["enabled"] is True and shown["check"]["check_id"] == ran.json()["check_id"]
+    assert shown["can_check"] is True and shown["check_note"] == ""
+    with models.session() as s:
+        rows = s.scalars(select(models.AuditEvent).where(models.AuditEvent.action == "custody.balance.check")).all()
+    assert [json.loads(r.detail) for r in rows] == [
+        {"check_id": ran.json()["check_id"], "match": 0, "mismatch": 1, "unchecked": 0}]
+
+
+def test_g7_custody_3_goes_down_and_up_again_keeping_the_cases():
+    from alembic import command
+    from alembic.config import Config
+    from sqlalchemy import inspect
+
+    held()
+    stored(tron(trc20="635000000"))
+    settings = Config(str(config.BACKEND_DIR / "alembic.ini"))
+    with models._engine.begin() as conn:
+        settings.attributes["connection"] = conn
+        command.downgrade(settings, "g7_statements_2")
+    assert "custody_balance_checks" not in set(inspect(models._engine).get_table_names())
+    assert models.get_case("case-1") is not None
+    models.init_db()
+    assert "custody_balance_checks" in set(inspect(models._engine).get_table_names())
