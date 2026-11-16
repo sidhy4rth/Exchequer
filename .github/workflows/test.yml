@@ -99,9 +99,18 @@ jobs:
           echo "docs_only=$docs_only"
           echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
 
+  # The suite runs in three shards at once, each on its own runner, so no two
+  # shards share a temporary file or a port. tests/conftest.py splits the
+  # files the full collection finds into EXCHEQUER_TEST_SHARD's part: every
+  # file lands in exactly one shard, so the three together run every test.
+  # Lint and the FIU-IND note run once, in the first shard. Never gated.
   backend:
-    name: backend tests
+    name: backend shard ${{ matrix.shard }} of 3
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     defaults:
       run:
         working-directory: backend
@@ -116,11 +125,29 @@ jobs:
           cache-dependency-path: backend/requirements-dev.txt
       # The dev lock: the image's packages plus pytest, ruff and PyYAML, all hashed.
       - run: pip install --require-hashes -r requirements-dev.txt
-      - run: ruff check app scripts tests migrations
+      - if: matrix.shard == 1
+        run: ruff check app scripts tests migrations
       - run: python -m pytest -p no:warnings
+        env:
+          EXCHEQUER_TEST_SHARD: ${{ matrix.shard }}/3
       # Warns (never fails) once the FIU-IND sources are more than 180 days
       # old by the real date; fiu-staleness.yml runs it weekly too.
-      - run: python scripts/check_fiu_staleness.py
+      - if: matrix.shard == 1
+        run: python scripts/check_fiu_staleness.py
+
+  # The required check: passes only when every backend shard passed. A
+  # failed, cancelled or skipped shard fails it.
+  backend_all:
+    name: backend tests
+    needs: backend
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every backend shard passed
+        env:
+          RESULT: ${{ needs.backend.result }}
+        run: test "$RESULT" = success
 
   # The suite migrates SQLite; the deployment may run on Postgres
   # (DATABASE_URL), so the same migrations run here against a real one.
@@ -256,13 +283,19 @@ jobs:
   # themes, at a desktop and a phone size (frontend/e2e/a11y.spec.js). The
   # backend serves the fresh build on this runner with no provider key: the
   # pages and a recorded demo need none, and nothing here starts a trace.
+  # Playwright splits the tests into four shards, each on its own runner
+  # with its own build and backend; together they run every test.
   a11y:
-    name: accessibility (WCAG 2.2 AA)
+    name: accessibility shard ${{ matrix.shard }} of 4
     needs: changes
     # Runs even if `changes` failed: an empty answer means test everything.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     env:
       EXCHEQUER_URL: http://127.0.0.1:8000
     steps:
@@ -307,16 +340,33 @@ jobs:
         run: npx playwright install --with-deps chromium
         working-directory: frontend
       - if: needs.changes.outputs.docs_only != 'true'
-        run: npm run a11y
+        run: npm run a11y -- --shard="$SHARD"
         working-directory: frontend
+        env:
+          SHARD: ${{ matrix.shard }}/4
       - if: failure()
         run: cat "$RUNNER_TEMP/uvicorn.log"
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: a11y-failure
+          name: a11y-failure-${{ matrix.shard }}
           path: frontend/test-results/
           retention-days: 7
+
+  # The required check: passes only when every accessibility shard passed
+  # (on a docs-only pull request each shard reports success with its steps
+  # skipped, as before).
+  a11y_all:
+    name: accessibility (WCAG 2.2 AA)
+    needs: a11y
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every accessibility shard passed
+        env:
+          RESULT: ${{ needs.a11y.result }}
+        run: test "$RESULT" = success
 
   # The citizen site (its own Vercel project): its functions' tests (on
   # SQLite, migrated by the backend's migrations; no network), page tests,

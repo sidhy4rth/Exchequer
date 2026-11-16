@@ -239,3 +239,16 @@ def _wait_for_background_runners(monkeypatch):
     if left := running():
         pytest.fail(f"background threads still running {RUNNER_STOP_SECONDS:.0f} s after the test: "
                     f"{sorted(t.name for t in left)}")
+
+
+def pytest_collection_modifyitems(config, items):
+    """On CI, keep only this shard's files (tests/shards.py, test.yml)."""
+    import shards
+
+    files = {item.path for item in items}
+    kept = shards.keep(files)
+    if kept is None:
+        return
+    deselected = [item for item in items if item.path not in kept]
+    items[:] = [item for item in items if item.path in kept]
+    config.hook.pytest_deselected(items=deselected)
