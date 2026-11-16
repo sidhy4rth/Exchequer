@@ -27,13 +27,13 @@
 
 ## Next
 
-1. owner decides the 0x294b conflict (CoinSwitch's lists vs Etherscan's "Binance 41")
+1. ~~owner decides the 0x294b conflict (CoinSwitch's lists vs Etherscan's "Binance 41")~~ Decided by the owner: 0x294b…34d9 stays labelled Binance (owner decisions in issue #193).
 2. still no public source for ZebPay, Bitbns, Giottus, Mudrex or BuyUcoin wallets; WazirX's archived PoR data covers only its first page (30 wallets of 242,187)
 3. add rows to `india_exchanges.json` and the chain label file together (the tests check they agree)
 
 ## Open questions
 
-- see Next 1
+- none (Next 1 answered in issue #193)
 
 ## Files mid-change (do not touch)
 

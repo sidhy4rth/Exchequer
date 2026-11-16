@@ -5,7 +5,7 @@
 - **Branch**: `feat/signoff-binding`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: merged in #133 on 2026-11-15
+- **Status**: merged in #133 (`4778a18c`) on 2026-11-15
 
 ## Done
 
@@ -27,7 +27,7 @@
 
 ## Next
 
-1. Review and merge #133. If #122 or #124 merges first, re-point `down_revision` of `backend/migrations/versions/g7_signoff_binding_1.py` to the new head.
+1. None. (~~Review and merge #133~~: merged in #133, `4778a18c`.)
 
 ## Open questions
 

@@ -5,7 +5,7 @@
 - **Branch**: `feat/job-stop-when-unwatched`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: PR #303 ready for review, behind `EXCHEQUER_JOB_STOP_UNWATCHED` (off)
+- **Status**: merged in #303 (`039b917c`), behind `EXCHEQUER_JOB_STOP_UNWATCHED` (off)
 
 ## Done
 
@@ -26,7 +26,7 @@
 
 ## Next
 
-1. Owner: review and merge #303; then decide whether to switch it on, using the checks in `docs/flag-rollout.md` (section `EXCHEQUER_JOB_STOP_UNWATCHED`).
+1. ~~Owner: review and merge #303~~ (merged in #303). Owner: decide whether to switch it on, using the checks in `docs/flag-rollout.md` (section `EXCHEQUER_JOB_STOP_UNWATCHED`).
 
 ## Open questions
 
