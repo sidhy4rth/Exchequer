@@ -5,7 +5,7 @@
 - **Branch**: `docs/status-sweep`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: in review
+- **Status**: merged in #236 (`b1803f17`)
 
 ## Done
 
@@ -21,7 +21,7 @@
 
 ## Next
 
-1. Review and merge.
+1. None. (~~Review and merge~~: merged in #236.)
 
 ## Open questions
 

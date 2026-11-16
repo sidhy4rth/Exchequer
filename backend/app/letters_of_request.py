@@ -40,7 +40,7 @@ from typing import Any
 
 from .display_text import one_line
 from .report import (EXCHANGE_WALLET, EXPLORER_TAG, INFERRED_DEPOSIT, LABELLED_DEPOSIT, _amount, _paid_at, _when,
-                     _when_iso, attribution_kind)
+                     _when_iso, attribution_kind, basis_lines, store_basis)
 from .request_letters import (BLANK, COMPANY_WALLET_KINDS, _amount_lines, _attribution, _claim, _cleaned,
                               _company_listed, _left_out, _letter_amount, _path_lines, _today, _transfers_into,
                               _verify_lines)
@@ -366,6 +366,9 @@ def draft(case_id: str, result: dict[str, Any], raw: dict[str, Any],
               *_path_lines(trace, asset, leave_out=address if every else None)]
     claim = " ".join(_claim(kind, trace, exchange).split())  # one paragraph: the claim is worded for a letter's lines
     lines += ["", *_para(f"The money reached the address {address}, {claim}")]
+    listed_by = store_basis(trace)
+    if listed_by:  # a label-store exchange row (ADR-0011, ADR-0012): what the attribution stands on, as the report says
+        lines += [ln for line in basis_lines(listed_by, exchange) for ln in _para(line)]
     if stated is not None:
         # Worded for a letter to the exchange; this one goes to the country's authority.
         lines += [f"   This is an estimate; {exchange}'s own records of the deposits are authoritative."

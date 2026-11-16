@@ -37,8 +37,8 @@ from .api_budget import (Cancelled, ResponseCache, ResponseTooLarge, SharedPacer
 from .evidence import EvidenceLog
 
 from . import config
-from .etherscan_client import (EtherscanError, ProviderResponseError, SinceRead, Transaction, is_tron_address,
-                               resolve_decimals, safe_int, split_page)
+from .etherscan_client import (EtherscanError, ProviderResponseError, ProviderUnavailableError, SinceRead,
+                               Transaction, is_tron_address, resolve_decimals, safe_int, split_page)
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +152,10 @@ class TronError(EtherscanError):
     """
 
 
+class TronUnavailableError(TronError, ProviderUnavailableError):
+    """Every retry of a transient failure failed (ProviderUnavailableError)."""
+
+
 class TronResponseError(TronError, ProviderResponseError):
     """TronGrid answered with a shape Exchequer cannot read."""
 
@@ -257,6 +261,7 @@ class TronClient:
     def _send(self, method: str, path: str, request_desc: str, **kwargs: Any) -> tuple[dict[str, Any], Any]:
         """(body, its evidence record)."""
         last_error: Exception | None = None
+        refused = False  # the last transient failure was a refusal (HTTP 429 or 403)
         for attempt in range(self.max_retries + 1):
             spend("trongrid", self._meter_key, 1, self.budget)  # the case's clock and request budget, every attempt
             self._throttle()
@@ -267,12 +272,14 @@ class TronClient:
                 raise TronResponseError(f"TronGrid response too large: {exc}") from exc
             except httpx.RequestError as exc:
                 last_error = TronError(f"Network error contacting TronGrid: {exc}")
+                refused = False
                 self._backoff(attempt, str(exc))
                 continue
 
             if response.status_code in (429, 403) or response.status_code >= 500:
                 # 403 here means the free rate limit, not a bad key.
                 last_error = TronError(f"TronGrid returned HTTP {response.status_code}")
+                refused = response.status_code in (429, 403)
                 if response.status_code in (429, 403):
                     self._pacer.penalize()  # every trace on this key is going too fast
                 self._backoff(attempt, f"HTTP {response.status_code}")
@@ -295,8 +302,9 @@ class TronClient:
             self._pacer.reward()
             return body, rec
 
-        raise TronError(
-            f"TronGrid request failed after {self.max_retries + 1} attempts: {last_error}"
+        raise TronUnavailableError(
+            f"TronGrid request failed after {self.max_retries + 1} attempts: {last_error}",
+            rate_limited=refused,
         )
 
     def _read_pages(self, path: str, params: dict[str, Any], scope: Any, ttl: float,

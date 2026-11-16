@@ -47,6 +47,7 @@ from .etherscan_client import (
     EtherscanError,
     ProviderQuotaError,
     ProviderResponseError,
+    ProviderUnavailableError,
     SinceRead,
     Transaction,
     is_valid_address,
@@ -141,6 +142,10 @@ class NoderealError(EtherscanError):
 
 class NoderealQuotaError(NoderealError, ProviderQuotaError):
     """NodeReal's monthly compute units are spent: not retried."""
+
+
+class NoderealUnavailableError(NoderealError, ProviderUnavailableError):
+    """Every retry of a transient failure failed (ProviderUnavailableError)."""
 
 
 class NoderealResponseError(NoderealError, ProviderResponseError):
@@ -276,6 +281,7 @@ class NoderealClient:
                 self.evidence.record_cached("nodereal", request_desc, self._cache.meta(cache_key), cached)
                 return cached
         last_error: Exception | None = None
+        refused = False  # the last transient failure was a refusal (HTTP 429, a rate-limit error)
 
         for attempt in range(self.max_retries + 1):
             # The case's clock and compute-unit budget, before every attempt.
@@ -288,11 +294,13 @@ class NoderealClient:
                 raise NoderealResponseError(f"NodeReal response too large: {exc}") from exc
             except httpx.RequestError as exc:
                 last_error = NoderealError(f"Network error contacting NodeReal: {exc}")
+                refused = False
                 self._backoff(attempt, str(exc))
                 continue
 
             if response.status_code == 429 or response.status_code >= 500:
                 last_error = NoderealError(f"NodeReal returned HTTP {response.status_code}")
+                refused = response.status_code == 429
                 if response.status_code == 429:
                     self._pacer.penalize()  # every trace on this key is going too fast
                 self._backoff(attempt, f"HTTP {response.status_code}")
@@ -318,6 +326,7 @@ class NoderealClient:
                     raise NoderealQuotaError(f"NodeReal quota spent: {message}")
                 if "limit" in message.lower() or "too many" in message.lower():
                     last_error = NoderealError(f"NodeReal rate limit: {message}")
+                    refused = True
                     self._pacer.penalize()
                     self._backoff(attempt, "rate limit")
                     continue
@@ -332,8 +341,9 @@ class NoderealClient:
                     "sha256": rec.sha256, "retrieved_at": rec.retrieved_at, "bytes": rec.bytes})
             return result
 
-        raise NoderealError(
-            f"NodeReal request failed after {self.max_retries + 1} attempts: {last_error}"
+        raise NoderealUnavailableError(
+            f"NodeReal request failed after {self.max_retries + 1} attempts: {last_error}",
+            rate_limited=refused,
         )
 
     def _cache_ttl(self, method: str, params: list[Any], result: Any) -> float:

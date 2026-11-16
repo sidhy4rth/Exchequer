@@ -18,3 +18,15 @@ export function ncrpNote(text) {
   const plain = String(text ?? '').replace(/[\s-]/g, '')
   return plain === '' || /^[23][0-9]{13}$/.test(plain) ? '' : NCRP_NOTE
 }
+
+// Where an NCRP number comes from, for a link beside it (NcrpPortalLinks.jsx).
+// Source: I4C, MHA, "National Cybercrime Reporting Portal [NCRP]",
+// https://i4c.mha.gov.in/ncrp.aspx, read 16.11.2026: "Report a Cybercrime on
+// www.cybercrime.gov.in" and "Complaints can be reported through helpline
+// number 1930 or on National Cybercrime Reporting Portal." and "This helps
+// citizens to report cyber financial frauds on National Helpline number
+// 1930." The portal's home
+// page answered 200 the same day. Only the home page is linked: no published
+// address opens one complaint, and the NCRP number never goes into a link.
+export const NCRP_PORTAL_URL = 'https://cybercrime.gov.in/'
+export const NCRP_HELPLINE = '1930'

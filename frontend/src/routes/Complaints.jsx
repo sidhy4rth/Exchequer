@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { claimComplaint, fetchChains, fetchComplaint, fetchComplaints, linkComplaintCase, sendComplaintMessage, setComplaintStatus } from '../api'
+import NcrpPortalLinks from '../components/NcrpPortalLinks'
 import { useMedia } from '../phone'
 import { useAccount } from '../session'
 import { plain } from '../text'
@@ -315,6 +316,7 @@ function Complaint({ reference }) {
         <h1 className="mono">{c.reference}</h1>
         <p className="cq-flags"><Ncrp value={c.ncrp} /><Flags c={c} /></p>
         {c.ncrp_note && <p className="note">{c.ncrp_note}</p>}
+        <NcrpPortalLinks />
       </header>
       <div className="cq-grid">
         <Claim c={c} officer={officer} onClaimed={(unit) => setC((now) => ({ ...now, unit }))} />
