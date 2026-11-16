@@ -111,10 +111,13 @@ def _batch_ref(rows: list[dict[str, Any]], ref: str | None) -> str | None:
 def start_batch(body: BatchRequest, http: Request, user: CurrentUser) -> JSONResponse:
     owner = _owner(http)
     _admit_batch(owner)
-    try:
-        rows = batches.validate_rows(body.rows)
-    except batches.BatchError as exc:
-        return JSONResponse(status_code=400, content={"detail": str(exc), "row_errors": exc.row_errors})
+    checked = batches.check_rows(body.rows)
+    if checked.problem is not None:
+        # The checks' own sentences, never an exception's text; the log keeps
+        # only the count (rows can carry a complaint's reference).
+        logger.info("Batch refused: %d bad row(s) of %d", len(checked.row_errors), len(body.rows))
+        return JSONResponse(status_code=400, content={"detail": checked.problem, "row_errors": checked.row_errors})
+    rows = checked.rows
     ref = None if user.demo else _batch_ref(rows, body.case_ref)
     # A chain whose provider allowance is used up today cannot trace its rows.
     for key in sorted({row["chain"] for row in rows}):

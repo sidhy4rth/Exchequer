@@ -51,4 +51,15 @@ describe('the SOP steps panel', () => {
     expect(screen.getByText(/Exchequer cannot see the portal/)).toBeInTheDocument()
     expect(calls).toEqual(['/sop-steps', '/trace/c1/sop-steps'])
   })
+
+  it('announces its loading line politely to screen readers', async () => {
+    server()
+    fetch.mockImplementation(async (url) => (String(url).endsWith('/sop-steps') && !String(url).includes('/trace/')
+      ? new Response(JSON.stringify({ enabled: true }), { status: 200 })
+      : new Promise(() => {}))) // the steps never arrive, so the loading line stays
+    const user = userEvent.setup()
+    render(<SopSteps result={{ case_id: 'c1' }} />)
+    await user.click(await screen.findByText('CFCFRMS SOP steps'))
+    expect(screen.getByText('Loading…').closest('[aria-live="polite"]')).not.toBeNull()
+  })
 })

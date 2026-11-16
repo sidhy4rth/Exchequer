@@ -266,10 +266,24 @@ def test_a_run_is_stored_and_only_its_owner_reads_the_newest_one():
     held()
     first = stored(tron(trc20="1"))
     second = stored(tron(trc20="635000000"))
-    assert custody_balance.latest(viewer(), "case-1")["check_id"] in (first["check_id"], second["check_id"])
+    assert first["check_id"] != second["check_id"]
+    assert custody_balance.latest(viewer(), "case-1")["check_id"] == second["check_id"]
     assert custody_balance.latest(viewer(BOB), "case-1") is None
     with models.session() as s:
         assert len(s.scalars(select(models.CustodyBalanceCheck)).all()) == 2
+
+
+def test_the_newest_run_is_the_last_one_kept_even_within_the_same_second(monkeypatch):
+    # Two runs in one second (a second click, two officers of a unit): the one kept last is the newest,
+    # and the time shown is still to the second.
+    times = iter(["2026-11-16T10:00:00.000001+00:00", "2026-11-16T10:00:00.000002+00:00"])
+    monkeypatch.setattr(custody_balance, "_checked_at", lambda: next(times))
+    held()
+    stored(tron(trc20="1"))
+    second = stored(tron(trc20="635000000"))
+    newest = custody_balance.latest(viewer(), "case-1")
+    assert newest["check_id"] == second["check_id"] and newest["counts"]["match"] == 1
+    assert newest["checked_at"] == second["checked_at"] == "2026-11-16T10:00:00+00:00"
 
 
 # -- routes ---------------------------------------------------------------------------------------

@@ -4,8 +4,8 @@
 - **Issue**: #121; more suggestions #334
 - **Branch**: `feat/case-tasks` (server, PR #122); `feat/case-tasks-screen` (screen, #123, on top of it); `feat/case-tasks-suggest` (suggestions, on top of #123); `feat/case-tasks-3` (two more suggestions, #334)
 - **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: merged in #122 (with #123 and #124) on 2026-11-15; live, no flag. two more suggestions behind `EXCHEQUER_MORE_TASK_SUGGESTIONS` (off) in PR #335, in review
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged in #122 (with #123 and #124) on 2026-11-15; live, no flag. Two more suggestions merged in #335 on 2026-11-16 (`c19f306f`), behind `EXCHEQUER_MORE_TASK_SUGGESTIONS` (off)
 
 ## Done
 
@@ -44,9 +44,7 @@
 
 ## Next
 
-1. Review and merge #122, then the screen PR (retarget it to `main` once #122 is squash-merged: merge `main` into it, keeping its side).
-2. Then the suggestions PR (retarget it to `main` the same way once #123 is merged).
-3. Review and merge #335 (two more rules, flag off). Then switch `EXCHEQUER_MORE_TASK_SUGGESTIONS` on per `docs/flag-rollout.md`: on a test case, record an exhibit with a SHA-256, change its holder, see the suggestion; check the file, see it go. Then retire the flag.
+1. Switch `EXCHEQUER_MORE_TASK_SUGGESTIONS` on per `docs/flag-rollout.md`: on a test case, record an exhibit with a SHA-256, change its holder, see the suggestion; check the file, see it go. Then retire the flag.
 
 ## Open questions
 

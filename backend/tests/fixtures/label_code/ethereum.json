@@ -137,6 +137,16 @@
     "recorded": "2026-11-15",
     "why": "FIU-IND-named exchange wallet (BingX, LBank, XT.com, Phemex or Bitrue), added with the fiu_named_exchanges rows (#342); read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
    },
+   "0x258b7b9a1ba92f47f5f4f5e733293477620a82cb": {
+    "block": 26423155,
+    "recorded": "2026-11-15",
+    "why": "FIU-IND-named exchange wallet (YouHodler, Changelly, Mercuryo or Beldex), added with the fiu_named_exchanges batch 3 rows (#358); read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
+   },
+   "0x260ee8f2b0c167e0cd6119b2df923fd061dc1093": {
+    "block": 26423155,
+    "recorded": "2026-11-15",
+    "why": "FIU-IND-named exchange wallet (YouHodler, Changelly, Mercuryo or Beldex), added with the fiu_named_exchanges batch 3 rows (#358); read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
+   },
    "0x2b3bf74b29f59fb8dda41cf3d6a8da28cf8e7921": {
     "block": 26422970,
     "recorded": "2026-11-15",
@@ -151,6 +161,11 @@
     "block": 26422970,
     "recorded": "2026-11-15",
     "why": "FIU-IND-named exchange wallet (BingX, LBank, XT.com, Phemex or Bitrue), added with the fiu_named_exchanges rows (#342); read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
+   },
+   "0x2f1f7fc76e6cf5ab3e186a2a2fd4fc31952a77cc": {
+    "block": 26423155,
+    "recorded": "2026-11-15",
+    "why": "FIU-IND-named exchange wallet (YouHodler, Changelly, Mercuryo or Beldex), added with the fiu_named_exchanges batch 3 rows (#358); read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
    },
    "0x2f288e5e6b0d3243a0a9b18ee3cac401fe199b65": {
     "block": 26421367,
@@ -447,6 +462,11 @@
     "recorded": "2026-11-15",
     "why": "FIU-IND-named exchange wallet (BingX, LBank, XT.com, Phemex or Bitrue), added with the fiu_named_exchanges rows (#342); read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
    },
+   "0x8c8d7c46219d9205f056f28fee5950ad564d7465": {
+    "block": 26423155,
+    "recorded": "2026-11-15",
+    "why": "FIU-IND-named exchange wallet (YouHodler, Changelly, Mercuryo or Beldex), added with the fiu_named_exchanges batch 3 rows (#358); read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
+   },
    "0x91d40e4818f4d4c57b4578d9eca6afc92ac8debe": {
     "block": 26421367,
     "recorded": "2026-11-15",
@@ -456,6 +476,11 @@
     "block": 26421367,
     "recorded": "2026-11-15",
     "why": "OKX sweep destination, added with the okx_sweep_destinations_2026_11_15 rows (#276); read from the same keyless node with check_label_code.record (a full --record run whose other answers were unchanged), not a re-record of the rest"
+   },
+   "0x96fc4553a00c117c5b0bed950dd625d1c16dc894": {
+    "block": 26423155,
+    "recorded": "2026-11-15",
+    "why": "FIU-IND-named exchange wallet (YouHodler, Changelly, Mercuryo or Beldex), added with the fiu_named_exchanges batch 3 rows (#358); read alone from the same keyless node with check_label_code.record, not a re-record of the rest"
    },
    "0x96fdc631f02207b72e5804428dee274cf2ac0bcd": {
     "block": 26421367,
@@ -1062,6 +1087,7 @@
   "0x252c8bbef63101ebca22c27951175c6b33c86b07": "0x",
   "0x252d1375ca8f8a4ca59f1e7635f8fd7c4a78031e": "0x",
   "0x2586db422ec15d5999b50c43be219756c46bb0bd": "0x",
+  "0x258b7b9a1ba92f47f5f4f5e733293477620a82cb": "0x",
   "0x25c6459e5c5b01694f6453e8961420ccd1edf3b1": "0x",
   "0x25c76fa90e90f5a5a6914da07baed9a9647c3dfd": "0x",
   "0x25c7d768a7d53e6ebe5590c621437126c766e1ea": "0x",
@@ -1072,6 +1098,7 @@
    "size": 1123
   },
   "0x260b364fe0d3d37e6fd3cda0fa50926a06c54cea": "0x",
+  "0x260ee8f2b0c167e0cd6119b2df923fd061dc1093": "0x",
   "0x267be1c1d684f78cb4f6a176c4911b741e4ffdc0": "0x",
   "0x26a78d5b6d7a7aceedd1e6ee3229b372a624d8b7": "0x",
   "0x2730ef3c0c180e7f7bcfca249c757421b208e333": "0x",
@@ -1120,6 +1147,7 @@
   "0x2eecc9026534fd430ac83c5007b068476fc5dc1f": "0x",
   "0x2eed6a08fb89a5cd111efa33f8dca46cfbeb370f": "0x",
   "0x2f1752e8b49c6e7391dc6e55934ceedc7abf18f7": "0x",
+  "0x2f1f7fc76e6cf5ab3e186a2a2fd4fc31952a77cc": "0x",
   "0x2f288e5e6b0d3243a0a9b18ee3cac401fe199b65": "0x608060405236156054577f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc54600090819081906001600160a01b0316368280378136915af43d82803e156050573d90f35b3d90fd5b7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc54600090819081906001600160a01b0316368280378136915af43d82803e156050573d90f3fea26469706673582212203a03c53e62063406d2b425c2ed497305ba7a6718e884d256aeb3ce0f4965111264736f6c63430008180033",
   "0x2f47a1c2db4a3b78cda44eade915c3b19107ddcc": "0x",
   "0x2f7e209e0f5f645c7612d7610193fe268f118b28": "0x",
@@ -1704,6 +1732,7 @@
   "0x8c395e3fb26939438acd5ca4be7684752829e269": "0x",
   "0x8c54ebdd960056d2cff5998df5695daca1fc0190": "0x",
   "0x8c7efd5b04331efc618e8006f19019a3dc88973e": "0x",
+  "0x8c8d7c46219d9205f056f28fee5950ad564d7465": "0x",
   "0x8ca36464405d442a23b7771fd751c4151e10fce7": "0x",
   "0x8cd1e135a65614b5863db915365707e9e02b6418": "0x",
   "0x8d05d9924fe935bd533a844271a1b2078eae6fcf": "0x",
@@ -1768,6 +1797,7 @@
   "0x96508574db3c2c601c4fbfbc49f4bdf4c3790710": "0x",
   "0x9696f59e4d72e237be84ffd425dcad154bf96976": "0x",
   "0x96bd79bb1b74f291258c2c5162fea25bc7862721": "0x",
+  "0x96fc4553a00c117c5b0bed950dd625d1c16dc894": "0x",
   "0x96fdc631f02207b72e5804428dee274cf2ac0bcd": "0x",
   "0x970d82aef119b99bc94213e592fe43812ec59a59": "0x",
   "0x975d9bd9928f398c7e01f6ba236816fa558cd94b": "0x",

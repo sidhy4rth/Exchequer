@@ -1031,7 +1031,9 @@ def _instant_letter(case_id: str, result: dict[str, Any]) -> str:
                              "exchange order, paid out in another asset to an address the customer gives.",
                              width=95, initial_indent="   ", subsequent_indent="   ", break_long_words=False),
               *(_amount_lines(asset, stated) if stated else ["", f"   The amount: {BLANK} (officer to state).",
-                                                             *_amount_unread(inst["trace"])]),
+                                                             # the case's estimate is for its own exchange
+                                                             *(_amount_unread(inst["trace"]) if inst["found"]
+                                                               else [])]),
               "", f"3. The transfers into {address} in this trace (times in IST, with UTC):",
               *(line for t in every for line in (f"     {t.get('value_native', 0):,.6f} {asset}, "
                                                  f"{_when(t.get('timestamp'))}", f"       tx {t.get('hash')}")),

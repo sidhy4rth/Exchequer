@@ -32,15 +32,18 @@ ROWS = DOC["rows"]
 FIU = json.loads((Path(config.DATA_DIR) / fiu_ind_status.STATUS_FILE).read_text(encoding="utf-8"))["exchanges"]
 KEYS = {"address", "chain", "exchange", "label", "type", "kind", "source", "source_date", "retrieved_on"}
 BATCHES = {1: {"BingX", "LBank", "XT.com", "Phemex", "Bitrue"},
-           2: {"MoonPay", "WOO X", "Paxful", "ProBit Global", "LCX", "CEX.IO"}}
-NAMED = BATCHES[1] | BATCHES[2]
+           2: {"MoonPay", "WOO X", "Paxful", "ProBit Global", "LCX", "CEX.IO"},
+           3: {"YouHodler", "Changelly", "Mercuryo", "Beldex"}}
+NAMED = BATCHES[1] | BATCHES[2] | BATCHES[3]
 USQ_5805 = "https://sansad.in/getFile/loksabhaquestions/annex/187/AU5805_lMTYNK.pdf?source=pqals"
 # Where FIU-IND's action against each is recorded, and its date (data/fiu_ind_status.json _meta.rule).
 PIB = {"BingX": "2173758", "LBank": "2173758", "Phemex": "2173758", "Bitrue": "2173758", "XT.com": "2308131",
-       "Paxful": "2173758", "CEX.IO": "2173758", "LCX": "2173758", "ProBit Global": "2173758", "WOO X": "2308131"}
+       "Paxful": "2173758", "CEX.IO": "2173758", "LCX": "2173758", "ProBit Global": "2173758", "WOO X": "2308131",
+       "YouHodler": "2173758", "Changelly": "2173758"}
 ACTION = {**{name: (f"https://www.pib.gov.in/PressReleasePage.aspx?PRID={pib}",
                     {"2173758": "2025-10-01", "2308131": "2026-09-09"}[pib]) for name, pib in PIB.items()},
-          "MoonPay": (USQ_5805, "2026-03-30")}  # Annexure-II only: no PIB release names it
+          # Annexure-II only: no PIB release names them.
+          **{name: (USQ_5805, "2026-03-30") for name in ("MoonPay", "Mercuryo", "Beldex")}}
 SOURCE = {"ethereum": re.compile(r"https://etherscan\.io/address/(0x[0-9a-f]{40})$"),
           "polygon": re.compile(r"https://polygonscan\.com/address/(0x[0-9a-f]{40})$")}
 AS_AT = re.compile(r"[A-Z][a-z]{2}-\d{2}-\d{4} \d{2}:\d{2}:\d{2} [AP]M \(UTC\)$")
@@ -150,6 +153,16 @@ def test_a_validation_control_wallet_and_a_multisig_contract_are_not_labelled():
     assert control in corpus
     for chain_key in SOURCE:
         assert get_matcher(chain_key).lookup(control) is None and get_matcher(chain_key).lookup(safe) is None
+
+
+def test_no_bitgo_candidate_is_labelled_and_no_bitgo_tag_reads_as_an_exchange():
+    # Every BitGo candidate holds contract code: its multisig wallets hold funds for the firms that use them.
+    (entry,) = [e for e in DOC["_meta"]["left_out"] if e["chain"] == "ethereum" and e["why"].startswith("BitGo")]
+    assert len(entry["addresses"]) == 10 and "0xbd02c51150a4ab6ce97b9de2025644594f3e75b8" in entry["addresses"]
+    for chain_key in SOURCE:
+        assert all(get_matcher(chain_key).lookup(a) is None for a in entry["addresses"])
+    assert DOC["_meta"]["batches"]["3"]["examined_none_taken"] == ["BitGo"] and "BitGo" not in FIU
+    assert all(exchange_for_tag(t) is None for t in ("BitGo 1", "BitGo: MultiSig 3", "BitGo: Batcher 1"))
 
 
 # -- each exchange's FIU-IND entry ---------------------------------------------------------

@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import CustodyBalance, { tally } from './CustodyBalance'
+import CustodyBalance, { readAt, tally } from './CustodyBalance'
 
 // Custody balance check on the Letters tab (backend custody_balance.py): each custody address's
 // balance on chain beside the register, said in words. Hidden while the server's flag is off.
@@ -72,5 +72,47 @@ describe('the custody balance check', () => {
     expect(tally({ match: 2, mismatch: 0, unchecked: 1 })).toBe('2 match · 1 not checked')
     expect(tally({ match: 0, mismatch: 2, unchecked: 0 })).toBe('2 mismatches')
     expect(tally({})).toBe('nothing to check')
+  })
+
+  it('stays open, with focus on its button, when a check clears the last mismatch', async () => {
+    const MATCH = { ...MISMATCH, status: 'match', chain_amount: '635', difference: '0', reason: 'Matches the register: 635 USDT.' }
+    api({
+      'GET /trace/c1/custody-balance': { body: { enabled: true, check: CHECK, can_check: true, check_note: '' } },
+      'POST /trace/c1/custody-balance': { status: 201, body: { ...CHECK, check_id: 'k2', results: [MATCH], counts: { match: 1, mismatch: 0, unchecked: 0 } } },
+    })
+    const { container } = open()
+    const button = await screen.findByRole('button', { name: 'Check balances on chain now' })
+    const details = container.querySelector('details')
+    expect(details.open).toBe(true) // a stored mismatch opens the panel
+    await userEvent.click(button)
+    expect(await screen.findByText('Custody balances · 1 match')).toBeInTheDocument()
+    expect(details.open).toBe(true)
+    expect(button).toHaveFocus()
+    expect(screen.getByRole('group', { name: `USDT at ${ADDRESS}: Matches the register` })).toBeVisible()
+  })
+
+  it('says the read time in UTC whichever way the server writes the offset', async () => {
+    // backend models.utc_now_iso(): isoformat(timespec="seconds") gives "+00:00", not "Z"
+    api({ 'GET /trace/c1/custody-balance': { body: { enabled: true, check: { ...CHECK, checked_at: '2026-11-16T06:00:00+00:00' } } } })
+    open()
+    expect(await screen.findByText(/^Read 2026-11-16 06:00:00 UTC\./)).toBeInTheDocument()
+    expect(readAt('2026-11-16T06:00:00Z')).toBe('2026-11-16 06:00:00 UTC')
+    expect(readAt('2026-11-16T11:30:00+05:30')).toBe('2026-11-16 06:00:00 UTC')
+    expect(readAt('not a time')).toBe('not a time')
+  })
+
+  it("never shows one case's balances on another when the first case's answer comes late", async () => {
+    let late
+    vi.stubGlobal('fetch', vi.fn((url) => (String(url).includes('/trace/c1/')
+      ? new Promise((resolve) => { late = resolve })
+      : Promise.resolve(new Response(JSON.stringify({ enabled: true, check: null, can_check: true, check_note: '' }), { status: 200 })))))
+    const { rerender } = open()
+    await waitFor(() => expect(late).toBeTypeOf('function'))
+    rerender(<CustodyBalance result={{ case_id: 'c2' }} />)
+    expect(await screen.findByText('Custody balances · not checked yet')).toBeInTheDocument()
+    late(new Response(JSON.stringify({ enabled: true, check: CHECK, can_check: true, check_note: '' }), { status: 200 }))
+    await new Promise((r) => setTimeout(r, 10))
+    expect(screen.getByText('Custody balances · not checked yet')).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: /Mismatch/ })).not.toBeInTheDocument()
   })
 })

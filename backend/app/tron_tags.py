@@ -98,6 +98,9 @@ CANONICAL: dict[str, str] = {
     # 5805 Annexure-II (30 Mar 2026: Moonpay); see data/fiu_ind_status.json.
     "paxful": "Paxful", "cexio": "CEX.IO", "lcx": "LCX", "probit": "ProBit Global",
     "woox": "WOO X", "moonpay": "MoonPay",
+    # The same, batch 3: PIB release 2173758 (YouHodler, Changelly) and USQ 5805
+    # Annexure-II (Mercuryo, Beldex).
+    "youhodler": "YouHodler", "changelly": "Changelly", "mercuryo": "Mercuryo", "beldex": "Beldex",
 }
 
 # How many unlabelled wallets one trace will ask about. Each is a request, so

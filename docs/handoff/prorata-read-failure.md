@@ -4,8 +4,8 @@
 - **Issue**: #320
 - **Branch**: `fix/prorata-read-failure`
 - **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: done, PR #321 ready for the lead
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged in #321 on 2026-11-16 (`9f29554c`); live
 
 ## Done
 
@@ -19,7 +19,7 @@
 
 ## Next
 
-1. Optional: show `prorata.read_failure` on the trace screen (the note already shows there as a limitation; `TraceView.jsx`'s pro-rata line still says only the reason). Taken in #322 / PR #323, see `prorata-read-failure-ui.md`.
+1. Optional: show `prorata.read_failure` on the trace screen (the note already shows there as a limitation; `TraceView.jsx`'s pro-rata line still says only the reason). Done: merged in #323 (`3212ebfc`), see `prorata-read-failure-ui.md`.
 
 ## Open questions
 

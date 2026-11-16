@@ -4,8 +4,8 @@
 - **Issue**: #330
 - **Branch**: `fix/prorata-read-failure-nits` (stacked on `fix/prorata-read-failure`, #321)
 - **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-16
-- **Status**: done, PR #331 ready for the lead (retarget to `main` after #321 merges)
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged in #331 on 2026-11-16 (`0f36c7a6`); live
 
 ## Done
 
