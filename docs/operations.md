@@ -151,6 +151,44 @@ tables by itself, and a signing key is created on the volume. Check
 "docker image builds and runs as non-root" builds and starts the image the
 way Railway does before anything is deployed.
 
+## CI on pull requests
+
+`.github/workflows/test.yml` runs on every pull request and every push to
+main. A newer push to a pull request cancels its older run; runs on main are
+never cancelled. Branch protection on main requires seven of its checks:
+`commit e-mails`, `backend tests`, `migrations on Postgres`, `frontend tests +
+build`, `accessibility (WCAG 2.2 AA)`, `citizen site tests + build` and
+`docker image builds and runs as non-root`.
+
+**Docs-only pull requests run less.** The job `what the pull request changes`
+diffs the merge commit under test against main. When every changed file is
+under `docs/` or is a Markdown file at the repository root (`README.md`,
+`DEMO.md`, `JUDGE_QA.md` and so on), these jobs still start and pass, but skip
+their steps:
+
+| Job | On a docs-only pull request |
+|---|---|
+| commit e-mails | runs in full |
+| backend tests | runs in full (tests read `docs/operations.md`, `DEMO.md`, `SECURITY.md` and scan every tracked file for keys) |
+| citizen site tests + build | API tests run (they read `docs/citizen-deploy.md`); page tests and build skipped |
+| frontend tests + build | skipped |
+| accessibility (WCAG 2.2 AA) | skipped |
+| docker image builds and runs as non-root | skipped (`docs/` is not in the image) |
+| migrations on Postgres | skipped (the Postgres service still starts) |
+
+Anything else runs everything: code, `backend/data/**`, workflows and
+`.github/scripts`, the Dockerfile, `render.yaml`, package and lock files,
+migrations, and a Markdown file anywhere outside `docs/` and the root. So
+does every push to main, and any run where that job could not decide (it
+fails, finds no merge commit, or meets a file name git had to quote). The
+rule lives in `.github/scripts/docs_only.sh`, tested by
+`backend/tests/test_ci_docs_only.py`.
+
+The skipped jobs are never left out of the run: a required check that does
+not report keeps a pull request waiting for ever, which is why test.yml has no
+`paths` or `paths-ignore` filter. CodeQL is GitHub's default setup, outside
+the workflow files, and still runs on every pull request (it is not required).
+
 ## A public demo
 
 To put the site in front of the public without letting anyone spend the
