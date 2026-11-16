@@ -17,7 +17,7 @@ Each section is marked:
   the site once it is merged.
 
 Status is as of 16 November 2026, when the site ran the code merged up to
-#317 (build 76101ce); anything merged after it reaches the site with the
+#325 (build 6d74f64); anything merged after it reaches the site with the
 next deploy. A switch counts as on only where the site's settings
 (`render.yaml`) turn it on. `docs/suite-features.md`
 tracks status for the team.

@@ -16,7 +16,7 @@
 
 ## Decisions
 
-- Left alone because an open PR edits them: `okx-sweep-destinations.md`, `fiu-ind-status-note.md`, `label-notes-no-local-paths.md`, `docs/officer-guide.md:19-20` (#325), `letters-of-request.md` (#353), `fiu-named-exchange-wallets.md` and row 1 of `docs/suite-features.md` (#359 wrote them; #362 and #363 edit them).
+- #325 merged while this was open (10:29 UTC, `6d74f649`): its three handoffs were already right, so only the officer guide's build line (now #325, build 6d74f64, as live `/health` reported at 10:40 UTC) and `postmerge-6-small-things.md` were changed after it. Left alone because an open PR edits them: `letters-of-request.md` (#353), `fiu-named-exchange-wallets.md` and row 1 of `docs/suite-features.md` (#359 wrote them; #362 and #363 edit them).
 
 ## Next
 
