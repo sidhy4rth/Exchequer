@@ -38,6 +38,7 @@ import textwrap
 from pathlib import Path
 from typing import Any
 
+from . import config
 from .display_text import one_line
 from .report import (EXCHANGE_WALLET, EXPLORER_TAG, INFERRED_DEPOSIT, LABELLED_DEPOSIT, _amount, _paid_at, _when,
                      _when_iso, attribution_kind, basis_lines, store_basis)
@@ -49,8 +50,8 @@ WORDING_FILE = Path(__file__).resolve().parent.parent / "data" / "mha_letter_of_
 # Figure 3.6 of the same guidelines: the countries with a treaty or agreement with India, as listed in 2019.
 COUNTRIES_FILE = Path(__file__).resolve().parent.parent / "data" / "mha_mlat_countries.txt"
 # Figure 3.6's other columns (Central Authority, language requirement, specifications), and the MHA's current
-# list from its MLAT portal. Read here and tested, but no draft or note uses them until a second person has
-# checked them by eye (docs/handoff/letters-of-request.md).
+# list from its MLAT portal. Read only with EXCHEQUER_MHA_FIG36 on (config.FLAGS, off by default), and even then
+# no draft or note uses them until a second person has checked them by eye (docs/handoff/letters-of-request.md).
 AUTHORITIES_FILE = Path(__file__).resolve().parent.parent / "data" / "mha_mlat_central_authorities.txt"
 PORTAL_FILE = Path(__file__).resolve().parent.parent / "data" / "mha_mlat_portal_countries.txt"
 SECTIONS = ("opening", "basis_treaty", "basis_reciprocity", "assurances", "limitation_of_use", "confidentiality",
@@ -129,16 +130,23 @@ def _rows(path: Path, fields: tuple[str, ...]) -> list[dict[str, str]]:
 
 def central_authorities() -> list[dict[str, str]]:
     """Figure 3.6's Central Authority, e-mail, language requirement and specifications for each 2019 row,
-    keyed by the same name as treaty_countries(). Not yet used in a draft (awaiting a by-eye check)."""
+    keyed by the same name as treaty_countries(). Not yet used in a draft (awaiting a by-eye check).
+    Empty, without reading the file, while EXCHEQUER_MHA_FIG36 is off."""
+    if not config.MHA_FIG36:
+        return []
     return _rows(AUTHORITIES_FILE, ("name", "authority", "email", "language", "specifications"))
 
 
 def portal_countries() -> list[dict[str, str]]:
     """The MHA MLAT portal's Treaty Details table: country, its "MLA Treaties" cell, its conventions.
-    Not yet used in a draft (awaiting a by-eye check)."""
+    Not yet used in a draft (awaiting a by-eye check). Empty, without reading the file, while
+    EXCHEQUER_MHA_FIG36 is off."""
+    if not config.MHA_FIG36:
+        return []
     return _rows(PORTAL_FILE, ("name", "treaty", "conventions"))
 
 
+# The pins read the bytes whatever the flag, so neither file can change unreviewed while it is off.
 def authorities_sha256() -> str:
     return hashlib.sha256(AUTHORITIES_FILE.read_bytes()).hexdigest()
 

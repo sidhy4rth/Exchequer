@@ -43,8 +43,9 @@ checked here, so read `/health/detail` → `flags` to be sure.
 | `EXCHEQUER_FREEZE_WORDING_V2` | Feature 7, #251: the bank-hold notice asks the bank to give effect to the Magistrate's order as it directs, not for a "debit freeze" | #252 | Off in `render.yaml`; awaits a lawyer; see its section below |
 | `EXCHEQUER_FIU_IND_NOTE` | #290: FIU-IND's dated, sourced facts about the exchange (9 Mar 2026 registered list, notices, penalties) as a note on the report's FINDING and the exchange letters | #291 + #295 | On: set in the Render dashboard on 15 Nov and in `render.yaml` (owner approved on 15 Nov); see its section below |
 | `EXCHEQUER_MORE_TASK_SUGGESTIONS` | Feature 6, #334: two more task suggestions, an exhibit handed over with no hash check since and unread alerts on the case's watches | #335 | Off in `render.yaml` |
+| `EXCHEQUER_MHA_FIG36` | Feature 7, #352: `letters_of_request.py` reads Figure 3.6's Central Authorities and language requirements and the MHA MLAT portal's current treaty list (`backend/data/mha_mlat_central_authorities.txt`, `mha_mlat_portal_countries.txt`). No draft or note shows them yet; off, the files are not read and a letter of request is byte for byte as before | #353 | Off in `render.yaml`; stays off until Barenyam's by-eye check of the two files (`docs/handoff/letters-of-request.md`), then a separate PR switches it on |
 
-That is all twenty-one flags in `FLAGS` on `main`.
+That is all twenty-two flags in `FLAGS` on `main`.
 
 The rest of this file is about the seven features named at the top. The steps
 below for switching on, checking and switching off apply to every flag above.
