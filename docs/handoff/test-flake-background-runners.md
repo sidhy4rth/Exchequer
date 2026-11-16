@@ -5,7 +5,7 @@
 - **Branch**: `fix/flaky-tests-2`
 - **Current**: nobody
 - **Last worked on**: Sidhyarth, 2026-11-14
-- **Status**: merged in #197 on 2026-11-15
+- **Status**: merged in #197 (`376157de`) on 2026-11-15
 
 ## Done
 
@@ -23,7 +23,7 @@
 
 ## Next
 
-1. Review and merge.
+1. None.
 
 ## Open questions
 

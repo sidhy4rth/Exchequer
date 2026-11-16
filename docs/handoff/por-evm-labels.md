@@ -22,7 +22,7 @@
 
 ## Next
 
-1. When #224 is merged, the store release adds `okx_por_ethereum.csv` (steps in the OKX section of the next-release notes kept with the label-store build, not in this repository; the OKX Ethereum rows that shipped in label-store release `labels-2026-11-16`, sidhy4rth/exchequer-labels, came from `okx_por_ethereum_typed_and_deposits.csv`, attached to that release). A store-row trace test for OKX Ethereum can then be added here.
+1. ~~When #224 is merged, the store release adds `okx_por_ethereum.csv` (steps in the OKX section of the next-release notes kept with the label-store build, not in this repository; the OKX Ethereum rows that shipped in label-store release `labels-2026-11-16`, sidhy4rth/exchequer-labels, came from `okx_por_ethereum_typed_and_deposits.csv`, attached to that release). A store-row trace test for OKX Ethereum can then be added here.~~ Done: #224 merged with #223 (`f653c37f`), and `backend/tests/test_store_deposit_trace.py` (#267, `7fcd1dab`) traces an OKX Ethereum store row.
 2. Each month both exchanges publish a new file. Rerun the script with the new file and a fresh `--sources` JSON; rows already held are kept, new wallets get the next numbers.
 3. The PR's left-out list: owner to decide on the 7 demo-named wallets (labelling them changes the recorded demos, which must then be re-recorded by `scripts/record_demos.py`).
 

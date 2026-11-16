@@ -61,7 +61,8 @@
     "Bybit": 13,
     "OKX": 95
    }
-  }
+  },
+  "fiu_named_exchanges": "41 wallets of exchanges FIU-IND acted against that had none here (BingX 17, LBank 5, LCX 1, Mercuryo 1, MoonPay 7, Paxful 2, Phemex 2, ProBit Global 1, WOO X 2, XT.com 2, YouHodler 1) added from data/fiu_named_exchanges.json (15 Nov 2026 UTC; batch 1 #342, batch 2 #354, batch 3 #358), which records each one's source (the explorer's public name tag on the address's page) and what was left out and why."
  },
  "labels": {
   "0x0031e147a79c45f24319dc02ca860cb6142fcba1": {
@@ -1853,6 +1854,211 @@
    "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
    "source_date": "2026-11-01",
    "retrieved": "2026-11-14"
+  },
+  "0x2b3bf74b29f59fb8dda41cf3d6a8da28cf8e7921": {
+   "exchange": "BingX",
+   "label": "BingX 29",
+   "type": "exchange_wallet"
+  },
+  "0x2b9287402e077f866a067176217ee6ec0e24e4cc": {
+   "exchange": "BingX",
+   "label": "BingX 47",
+   "type": "exchange_wallet"
+  },
+  "0x406c22b8740ae955b04fd11c2061e053807e2a69": {
+   "exchange": "BingX",
+   "label": "BingX 9",
+   "type": "exchange_wallet"
+  },
+  "0x47dd7b40346037d7ca47d45e40c66a2f351edb20": {
+   "exchange": "BingX",
+   "label": "BingX 43",
+   "type": "exchange_wallet"
+  },
+  "0x6c69fa64ec451b1bc5b5fbaa56cf648a281634be": {
+   "exchange": "BingX",
+   "label": "BingX 15",
+   "type": "exchange_wallet"
+  },
+  "0x74b0e133bee3384dfcfa60b31d85d8e2062de811": {
+   "exchange": "BingX",
+   "label": "BingX 40",
+   "type": "exchange_wallet"
+  },
+  "0x766182bfa8b8790d61c4d7e7912c1c3a6f42cef6": {
+   "exchange": "BingX",
+   "label": "BingX 3",
+   "type": "exchange_wallet"
+  },
+  "0xa0fca8fa8e9c6aa77305f94be0e03908d0a42900": {
+   "exchange": "BingX",
+   "label": "BingX 5",
+   "type": "exchange_wallet"
+  },
+  "0xa88f86e5685fca7c5d6de0e4d944875b007137b5": {
+   "exchange": "BingX",
+   "label": "BingX 8",
+   "type": "exchange_wallet"
+  },
+  "0xaf1e33f8153f25e304dec5cb544b5b6ccc5520ed": {
+   "exchange": "BingX",
+   "label": "BingX 23",
+   "type": "exchange_wallet"
+  },
+  "0xc3dcd744db3f114f0edf03682b807b78a227bf74": {
+   "exchange": "BingX",
+   "label": "BingX 10",
+   "type": "exchange_wallet"
+  },
+  "0xc4334a9af50c80a12c484de643149f6159bdd110": {
+   "exchange": "BingX",
+   "label": "BingX 4",
+   "type": "exchange_wallet"
+  },
+  "0xcb95ca610c91629c835b129355999b7acdc4cc06": {
+   "exchange": "BingX",
+   "label": "BingX 28",
+   "type": "exchange_wallet"
+  },
+  "0xd38cf87f114f2a0582c329fb9df4f7044ce71330": {
+   "exchange": "BingX",
+   "label": "BingX 26",
+   "type": "exchange_wallet"
+  },
+  "0xda43c54ce5083885f561e05fd6220b7096be246c": {
+   "exchange": "BingX",
+   "label": "BingX 2",
+   "type": "exchange_wallet"
+  },
+  "0xe4516477adacc6682cf18069475f676a5b5667f9": {
+   "exchange": "BingX",
+   "label": "BingX 14",
+   "type": "exchange_wallet"
+  },
+  "0xef317e433b0836f294866d43f67d6871b609b351": {
+   "exchange": "BingX",
+   "label": "BingX 39",
+   "type": "exchange_wallet"
+  },
+  "0x0e80abb31ace45ae26f9a2943acaab72e77de9be": {
+   "exchange": "LBank",
+   "label": "LBank 5",
+   "type": "exchange_wallet"
+  },
+  "0x120051a72966950b8ce12eb5496b5d1eeec1541b": {
+   "exchange": "LBank",
+   "label": "LBank: Hot Wallet 3",
+   "type": "exchange_wallet"
+  },
+  "0x22f83e4b9cb95cb99b88e8f4f15ea598c74c2788": {
+   "exchange": "LBank",
+   "label": "LBank 1",
+   "type": "exchange_wallet"
+  },
+  "0x25b63c988310de90031b84975ae13a6015ca6a16": {
+   "exchange": "LBank",
+   "label": "LBank 8",
+   "type": "exchange_wallet"
+  },
+  "0xec174c25bba7359b56fd672c8899664121e7dbcf": {
+   "exchange": "LBank",
+   "label": "LBank 7",
+   "type": "exchange_wallet"
+  },
+  "0x35d2d03607b9155b42cf673102fe58251ac4f644": {
+   "exchange": "Phemex",
+   "label": "Phemex 3",
+   "type": "exchange_wallet"
+  },
+  "0x50be13b54f3eebbe415d20250598d81280e56772": {
+   "exchange": "Phemex",
+   "label": "Phemex",
+   "type": "exchange_wallet"
+  },
+  "0x104703893f56243c0e56441a99eb3f32e1ed6ad2": {
+   "exchange": "XT.com",
+   "label": "XT.com 2",
+   "type": "exchange_wallet"
+  },
+  "0xcab044b301d94875ac1502b73e54d63b0162c70f": {
+   "exchange": "XT.com",
+   "label": "XT.com : Hot Wallet",
+   "type": "exchange_wallet"
+  },
+  "0x0b5c4a7fcda49e0a8661419bb55b86161a86db2a": {
+   "exchange": "MoonPay",
+   "label": "MoonPay 5",
+   "type": "exchange_wallet"
+  },
+  "0x1440ec793ae50fa046b95bfeca5af475b6003f9e": {
+   "exchange": "MoonPay",
+   "label": "MoonPay 2",
+   "type": "exchange_wallet"
+  },
+  "0x151b381058f91cf871e7ea1ee83c45326f61e96d": {
+   "exchange": "MoonPay",
+   "label": "MoonPay 4",
+   "type": "exchange_wallet"
+  },
+  "0x17f1a51da68d27c94d2a51d92b27b5bd4718b986": {
+   "exchange": "Paxful",
+   "label": "Paxful 1",
+   "type": "exchange_wallet"
+  },
+  "0x22f6cc8738308a8c92a6a71ea67832463d1fec0d": {
+   "exchange": "MoonPay",
+   "label": "MoonPay 8",
+   "type": "exchange_wallet"
+  },
+  "0x63dfe4e34a3bfc00eb0220786238a7c6cef8ffc4": {
+   "exchange": "WOO X",
+   "label": "WOO X",
+   "type": "exchange_wallet"
+  },
+  "0x777d4627e31863b2a49e2985af46525f21a9846c": {
+   "exchange": "Paxful",
+   "label": "Paxful 3",
+   "type": "exchange_wallet"
+  },
+  "0x7afc12c8dd2e6591581d95586eb2c2a4905a12a9": {
+   "exchange": "MoonPay",
+   "label": "MoonPay 7",
+   "type": "exchange_wallet"
+  },
+  "0xbc4e4069b1cb2fc1256a2bf454ae3affb4e05a4d": {
+   "exchange": "LCX",
+   "label": "LCX Exchange",
+   "type": "exchange_wallet"
+  },
+  "0xd108fd0e8c8e71552a167e7a44ff1d345d233ba6": {
+   "exchange": "MoonPay",
+   "label": "MoonPay 3",
+   "type": "exchange_wallet"
+  },
+  "0xd42f958e1c3e2a10e5d66343c4c9a57726e5b4b6": {
+   "exchange": "MoonPay",
+   "label": "MoonPay 6",
+   "type": "exchange_wallet"
+  },
+  "0xdba24f19bce0f32ea4273faea7c01d7f9d4f91d6": {
+   "exchange": "ProBit Global",
+   "label": "ProBit 4",
+   "type": "exchange_wallet"
+  },
+  "0xe505bf08c03cc0fa4e0fdfa2487e2c11085b3fd9": {
+   "exchange": "WOO X",
+   "label": "Woo X 3",
+   "type": "exchange_wallet"
+  },
+  "0x2f1f7fc76e6cf5ab3e186a2a2fd4fc31952a77cc": {
+   "exchange": "YouHodler",
+   "label": "YouHodler 1",
+   "type": "exchange_wallet"
+  },
+  "0x8c8d7c46219d9205f056f28fee5950ad564d7465": {
+   "exchange": "Mercuryo",
+   "label": "mercuryo",
+   "type": "exchange_wallet"
   }
  }
 }

@@ -51,6 +51,27 @@ def test_only_a_tag_naming_a_known_exchange_counts():
     assert exchange_for_tag(None) is None
 
 
+@pytest.mark.parametrize("tag, exchange", [
+    ("Paxful 3", "Paxful"), ("CEX.IO", "CEX.IO"), ("CEX.IO 2", "CEX.IO"), ("LCX 1", "LCX"),
+    ("LCX Exchange", "LCX"), ("ProBit 1", "ProBit Global"), ("Woo X 3", "WOO X"), ("WOO X", "WOO X"),
+    ("MoonPay 5", "MoonPay"), ("YouHodler", "YouHodler"), ("YouHodler 1", "YouHodler"),
+    ("Changelly", "Changelly"), ("mercuryo", "Mercuryo"), ("Mercuryo 2", "Mercuryo"), ("Beldex", "Beldex"),
+])
+def test_exchanges_fiu_ind_named_read_as_that_exchange(tag, exchange):
+    # Names from PIB releases 2173758 and 2308131 and USQ 5805 Annexure-II, spelt as the explorers tag them.
+    assert exchange_for_tag(tag) == exchange
+
+
+@pytest.mark.parametrize("tag", [
+    "MoonPay: Withdrawals 1", "LCX: Company Reserve", "LCX AG: LCX Token", "Woo X: Team", "Woo X: Treasury",
+    "WOO X: Staking Cold 1", "WOO X: Deployer", "Paxful (Fake)", "CEX.IO Scam", "Phish: MoonPay",
+    "Changelly (Fake)", "Fake_Changelly", "YouHodler: Treasury", "Mercuryo: Deployer", "Beldex: BDX Token",
+    "Phish: Mercuryo",
+])
+def test_their_other_tags_and_lookalikes_name_no_exchange(tag):
+    assert exchange_for_tag(tag) is None
+
+
 def test_the_tag_is_read_from_the_response_and_never_invented():
     assert tag_from_response({"addressTag": " Binance-Hot 7 "}) == "Binance-Hot 7"
     assert tag_from_response({"addressTag": "", "publicTag": "OKX 1"}) == "OKX 1"
@@ -227,6 +248,9 @@ def test_a_store_instant_exchanger_is_still_named_once_tronscan_names_another_wa
     swap = "TDoXUNZ6PajKuiUkcYg3EDSV9bnqGqsbcf"
 
     class Store:
+        def exchange_row(self, chain, address):  # as LabelStore's: no exchange row here, so None
+            return None
+
         def instant_exchanger(self, chain, address):
             return {"exchange": "FixedFloat", "label": "FixedFloat", "type": "unknown",
                     "category": INSTANT_EXCHANGER, "source": "test"} if address == swap else None
@@ -251,3 +275,18 @@ def test_a_store_instant_exchanger_is_still_named_once_tronscan_names_another_wa
     assert result["live_tags"]["found"][0]["address"] == EXCH
     hit = next(m for m in result["matches"] if m["address"] == swap)
     assert hit["exchange"] == "FixedFloat" and hit["category"] == INSTANT_EXCHANGER
+
+
+@pytest.mark.parametrize("tag", ["CEX", "CEX 1", "Cex Hot Wallet", "CEX: Deposit", "CEX-2", "Cex.com 3"])
+def test_cex_alone_is_the_word_for_a_centralised_exchange_not_cex_io(tag):
+    # Only CEX.IO's own spellings read as CEX.IO (#371), here and in the EVM importers that reuse the map.
+    from scripts import import_eth_labels
+    assert exchange_for_tag(tag) is None
+    assert import_eth_labels.CANONICAL.get(import_eth_labels.tag_head(tag)) is None
+
+
+@pytest.mark.parametrize("tag", ["CEX.IO", "CEX.IO 2", "CEX.IO Hot Wallet", "CEXIO 1", "cex.io: Wallet"])
+def test_cex_io_spelt_out_still_reads_as_cex_io(tag):
+    from scripts import import_eth_labels
+    assert exchange_for_tag(tag) == "CEX.IO"
+    assert import_eth_labels.CANONICAL.get(import_eth_labels.tag_head(tag)) == "CEX.IO"

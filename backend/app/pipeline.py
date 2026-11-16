@@ -60,6 +60,7 @@ from .pattern_detection import PatternConfig, detect_patterns, flag_names
 from .risk_matcher import MIXER, REPORTED, RiskMatcher, get_risk_matcher
 from .tron_tags import LiveTronExchanges, TronScanTags
 from .prorata import estimate as estimate_prorata
+from .provider_errors import read_again_once
 from .scoring import principal_path, score_case, seed_outflow, widest_routes
 from .tracing_methods import compare as compare_methods, read_once
 
@@ -956,9 +957,10 @@ def run_trace(request: TraceRequest, seed_window: int | None = None,
                     lead_path = []
                 # One read of each wallet's flows in its window, shared by
                 # pro-rata and R4: pro-rata needs what the wallet paid out too,
-                # to net out coins it got back (W -> X -> W).
+                # to net out coins it got back (W -> X -> W). A read refused
+                # for a passing reason is made once more, within the clock.
                 flows = getattr(client, "get_flows_between", None)
-                flows = read_once(flows) if flows else None
+                flows = read_once(read_again_once(flows, budget)) if flows else None
                 # The chain's figures along the route the shares chose: pro-rata
                 # caps at the swaps' output itself (and says so).
                 prorata = estimate_prorata(result.graph, lead_path,

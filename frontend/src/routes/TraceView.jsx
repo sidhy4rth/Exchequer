@@ -13,6 +13,7 @@ import TimelineTab from '../components/case/TimelineTab'
 import LettersTab from '../components/case/LettersTab'
 import VictimFlow from '../components/case/VictimFlow'
 import PrivacyNotes from '../components/case/PrivacyNotes'
+import ProrataReadFailure from '../components/case/ProrataReadFailure'
 import CaseRefField, { refOk, tidyRef, useSignedIn } from '../components/CaseRefField'
 import { useCaseTab } from './caseTab'
 import './TraceView.css'
@@ -20,6 +21,7 @@ import { plain } from '../text'
 import { BAND_RULE, bandLabel, bandOf } from '../components/confidence'
 import EntitiesTab from '../components/case/EntitiesTab'
 import { Address, PATTERN_NAME, RISK_NAME, middle, mmss, num, txUrl, when } from '../components/case/format'
+import StoreRowBasis from '../components/case/StoreRowBasis'
 const COMPONENT_NAME = {
   hop_proximity: 'Hop proximity',
   amount_correlation: 'Amount correlation',
@@ -594,11 +596,13 @@ export default function TraceView() {
                   {!reverse && result.prorata?.status === 'unknown' && (
                     <p className="note prorata-unknown">Pro-rata: not estimated — {result.prorata.reason}. The score gives the amount no credit.</p>
                   )}
+                  {!reverse && <ProrataReadFailure prorata={result.prorata} />}
                   {!reverse && <MethodRange methods={result.tracing_methods} unit={unit} />}
                   <div className="cite">
                     <span className="micro">{result.attribution_inferred ? 'Address to ask the exchange about' : 'Address to cite in the request'}</span>
                     <Address value={result.exchange_address} head={22} tail={20} />
                   </div>
+                  <StoreRowBasis result={result} />
                 </>
               ) : followed ? (
                 <>

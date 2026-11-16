@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 
-from app import batches, models, ownership, pipeline, rate_limit
+from app import batches, config, models, ownership, pipeline, rate_limit
 from app.main import app
 
 ALICE = "a" * 32
@@ -81,6 +81,28 @@ def test_bad_rows_come_back_by_number(client):
     r = client.post("/batches", json={"rows": [{"address": A1}, {"address": "x"}]},
                     headers={ownership.OWNER_HEADER: ALICE})
     assert r.status_code == 400 and r.json()["row_errors"][0]["row"] == 2
+
+
+def test_row_checks_answer_with_data_not_an_exception():
+    assert batches.check_rows([]) == batches.RowCheck(problem="The batch has no rows.")
+    bad = batches.check_rows([{"address": A1}, {"address": A2, "chain": "Doge"}])
+    assert bad.rows == [] and bad.problem == "1 row cannot be traced as written."
+    assert bad.row_errors == [{"row": 2, "error": "Unsupported chain 'doge'. Supported: "
+                                                  + ", ".join(sorted(config.CHAINS)) + "."}]
+    good = batches.check_rows([{"address": A1}])
+    assert good.problem is None and good.row_errors == [] and good.rows[0]["address"] == A1
+
+
+def test_a_refused_batch_says_what_failed_in_the_checks_own_words(client):
+    h = {ownership.OWNER_HEADER: ALICE}
+    r = client.post("/batches", json={"rows": [{"address": A1}, {"address": A2, "chain": "doge"}]}, headers=h)
+    assert r.status_code == 400
+    assert r.json() == {"detail": "1 row cannot be traced as written.",
+                        "row_errors": [{"row": 2, "error": batches.check_rows(
+                            [{"address": A2, "chain": "doge"}]).row_errors[0]["error"]}]}
+    assert "Traceback" not in r.text and "Error" not in r.text
+    empty = client.post("/batches", json={"rows": []}, headers=h)
+    assert empty.status_code == 400 and empty.json() == {"detail": "The batch has no rows.", "row_errors": []}
 
 
 def test_a_batch_is_charged_against_the_hourly_limit_in_full(client, monkeypatch):

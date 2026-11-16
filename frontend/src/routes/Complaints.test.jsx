@@ -169,6 +169,22 @@ describe('a complaint', () => {
     expect(screen.getByText('31234567890123')).toBeInTheDocument()
   })
 
+  it('links the NCRP portal and 1930 in the header with feature 8 on, and never puts the NCRP number in a link', async () => {
+    const fetch = open('/complaints/EXQ-NEWER222', { '/sop-summary': { body: { enabled: true } } })
+    const portal = await screen.findByRole('link', { name: /cybercrime\.gov\.in \(opens the government site in a new tab\)/ })
+    expect(portal.closest('header')).toBeInTheDocument()
+    expect(portal).toHaveAttribute('href', 'https://cybercrime.gov.in/')
+    expect(screen.getByRole('link', { name: /^Call 1930/ })).toHaveAttribute('href', 'tel:1930')
+    for (const a of screen.getAllByRole('link')) expect(a.getAttribute('href')).not.toContain('31234567890123')
+    expect(fetch.mock.calls.every(([url]) => !String(url).includes('31234567890123'))).toBe(true)
+  })
+
+  it('shows no portal links with feature 8 off', async () => {
+    open('/complaints/EXQ-NEWER222')
+    expect(await screen.findByRole('heading', { level: 1, name: 'EXQ-NEWER222' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /cybercrime\.gov\.in/ })).not.toBeInTheDocument()
+  })
+
   it('starts a trace only from the officer\'s click, with the hash, the wallet and the NCRP number kept out of the link', async () => {
     const user = userEvent.setup()
     open('/complaints/EXQ-NEWER222')

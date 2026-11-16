@@ -2,36 +2,79 @@ name: Keep awake
 
 # Render's free instance sleeps after 15 minutes with no inbound request, and
 # the first visit after a sleep waits for the container to start. This job
-# asks for /health every 14 minutes so the instance never reaches 15 idle
+# asks for /health every 10 minutes so the instance never reaches 15 idle
 # minutes. It needs no secret and reads nothing from the repository.
+#
+# GitHub runs schedules on a best-effort basis and in this repository drops
+# most of them (a */14 schedule ran twice in 15 hours), so a run does not
+# ping once and stop: it loops. One run is four legs of just under six hours
+# (the most one job may run), one after another, about 23 hours in all. The
+# hourly schedule only has to land once in that time; a run that arrives
+# while one is going waits (concurrency) and takes over when it ends, and a
+# newer arrival replaces a waiting one, so at most one loop runs.
 #
 # Off until the repository's owner sets the repository variable
 # KEEP_AWAKE=on (docs/operations.md, "Keeping the site awake"); a run started
-# by hand always runs. It does not check watches: that is watch-cron.yml,
+# by hand always runs. Switching it off stops new runs only: cancel the run
+# in progress in Actions. It does not check watches: that is watch-cron.yml,
 # which needs its own token.
 on:
   schedule:
-    - cron: "*/14 * * * *"
+    - cron: "23 * * * *"
   workflow_dispatch:
+    inputs:
+      once:
+        description: "Ask once and stop, instead of starting the loop"
+        type: boolean
+        default: false
 
 permissions: {}
 
+# A one-off check by hand must not queue behind a loop that runs for hours.
 concurrency:
-  group: keep-awake
-  cancel-in-progress: true
+  group: keep-awake${{ inputs.once && '-once' || '' }}
+  cancel-in-progress: false
 
 jobs:
   ping:
     if: github.event_name == 'workflow_dispatch' || vars.KEEP_AWAKE == 'on'
     runs-on: ubuntu-24.04
-    timeout-minutes: 4
+    strategy:
+      # One leg at a time, and a failed leg does not cancel the next.
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        leg: ${{ fromJSON(inputs.once && '[1]' || '[1, 2, 3, 4]') }}
+    # 340 minutes of pings, up to 4 for the last answer, 5 of rest: 349.
+    timeout-minutes: 355
     env:
       EXCHEQUER_URL: ${{ vars.SITE_URL || 'https://exchequer.co.in' }}
+      ONCE: ${{ inputs.once && 'true' || 'false' }}
     steps:
-      # A sleeping instance can take a minute to answer; one retry covers a
-      # waking proxy's 502/503.
-      - name: Ask for /health
+      # A sleeping instance can take a minute to answer; two retries cover a
+      # waking proxy's 502/503. A ping that fails is a warning and the loop
+      # goes on; a leg is red only if no ping in it was answered.
+      - name: Ask for /health every 10 minutes
         run: |
-          curl -fsS --max-time 60 --retry 1 --retry-delay 15 --retry-all-errors \
-            -o /dev/null "$EXCHEQUER_URL/health"
-          echo "Awake."
+          interval=600   # seconds between pings; never below 300
+          budget=$((340 * 60))
+          if [ "$ONCE" = true ]; then budget=0; fi
+          start=$(date +%s); pings=0; failed=0
+          while :; do
+            t0=$(date +%s); pings=$((pings + 1))
+            if curl -fsS --max-time 60 --retry 2 --retry-delay 15 --retry-all-errors \
+                -o /dev/null "$EXCHEQUER_URL/health"; then
+              echo "$(date -u +%H:%M:%SZ) awake"
+            else
+              failed=$((failed + 1))
+              echo "::warning::$(date -u +%H:%M:%SZ) /health did not answer"
+            fi
+            next=$((t0 + interval))
+            [ $((next - start)) -le "$budget" ] || break
+            sleep $((next - $(date +%s)))
+          done
+          echo "$pings pings, $failed unanswered."
+          # Rest 5 minutes before the next leg or run asks again, so two
+          # pings are never closer than that.
+          if [ "$ONCE" != true ]; then sleep 300; fi
+          [ "$failed" -lt "$pings" ]

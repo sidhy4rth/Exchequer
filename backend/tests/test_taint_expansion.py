@@ -80,6 +80,38 @@ def test_a_part_below_the_share_is_not_followed_but_is_reported():
     assert left["share_of_outflow"] == round(0.2 / 44.2, 4)
 
 
+def test_a_known_exchange_under_the_share_is_still_reached_and_not_reported_untraced():
+    # #382: 0.2 of 44.2 straight to the exchange is under 1%, but the walk never
+    # expands an exchange, so keeping it costs no read; leaving it out hid it.
+    history, mules = split(12)
+    history[SEED].append(tx(2000, SEED, EXCH, 0.2, 1))
+    result = walk(history, branch_min_share=0.01)
+    assert result.graph.has_edge(SEED, EXCH)
+    assert EXCH in result.terminal_addresses
+    assert result.untraced == []
+
+
+def test_an_ordinary_address_under_the_share_is_still_left_untraced_beside_a_kept_exchange():
+    # Silent on ordinary activity: only an address is_terminal names is kept.
+    history, mules = split(12, smallest=0.2)
+    history[SEED].append(tx(2000, SEED, EXCH, 0.1, 1))
+    result = walk(history, branch_min_share=0.01)
+    assert result.graph.has_edge(SEED, EXCH)
+    assert not result.graph.has_node(mules[-1])
+    ((left,),) = [result.untraced]
+    assert left["counterparties"] == 1 and left["value_native"] == 0.2 and left["rule"] == "min_share"
+
+
+def test_the_hard_cap_bounds_kept_known_addresses_too():
+    many = [addr(f"e{i:03x}") for i in range(60)]
+    history = {SEED: [tx(1, SEED, addr("b16"), 1000.0, 1)] + [tx(10 + i, SEED, e, 0.01, 1) for i, e in enumerate(many)]}
+    result = build_trace_graph(SEED, Client(history), cfg=TraceConfig(max_depth=2, branch_min_share=0.01,
+                                                                      max_branches_hard=50),
+                               is_terminal=lambda a: a in many, direction=OUTGOING)
+    assert sum(1 for e in many if result.graph.has_node(e)) == 50
+    assert result.untraced[0]["counterparties"] == 10
+
+
 def test_dust_is_still_dropped_before_any_rule():
     history, _ = split(3, smallest=0.0005)  # below min_value_native
     result = walk(history, branch_min_share=0.0)
@@ -130,3 +162,23 @@ def test_with_the_flag_on_the_split_no_longer_hides_the_exchange(traced):
 
 def test_the_flag_is_off_by_default():
     assert config.FLAGS["EXCHEQUER_TAINT_EXPANSION"]["on"] is False
+
+
+def test_with_the_flag_on_a_small_direct_payment_to_an_exchange_still_names_it(monkeypatch):
+    # #382, through the pipeline with the flag on: 5 of the 10,005 sent goes
+    # straight to the exchange. It is the case's exchange (the share rule only
+    # stops the walk from expanding small branches), not "no exchange found".
+    history = {SEED: [tx(1, SEED, addr("ee11"), 10000.0, 1), tx(2, SEED, EXCH, 5.0, 2)]}
+
+    @contextmanager
+    def open_source(_chain, _asset):
+        yield Client(history)
+
+    labels = {EXCH: {"exchange": "Binance", "label": "Binance 14", "type": "hot_wallet"}}
+    monkeypatch.setattr(pipeline, "open_source", open_source)
+    monkeypatch.setattr(pipeline, "get_matcher", lambda key: ExchangeMatcher(labels, chain="ethereum"))
+    monkeypatch.setattr(pipeline, "detect_swaps", lambda *a, **k: [])
+    monkeypatch.setattr(config, "TAINT_EXPANSION", True)
+    result = pipeline.run_trace(TraceRequest(address=SEED, chain="ethereum", asset="ETH", max_depth=3))
+    assert result["exchange"] == "Binance" and result["exchange_address"] == EXCH
+    assert not any(u["address"] == SEED for u in result["untraced"])

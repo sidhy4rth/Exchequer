@@ -195,7 +195,10 @@
         "0x562680a4dc50ed2f14d75bf31f494cfe0b8d10a1": "EIP-7702 delegated account, delegate 0x63c0c19a282a1b52b07dd5a65b58948a07dae32b; type hot_wallet kept (Hotbit 9 (defunct))",
         "0x59e0cda5922efba00a57794faf09bf6252d64126": "EIP-7702 delegated account, delegate 0x0000fb7702036ff9f76044a501ac1aa74cbab16b; type hot_wallet kept (Bitkub: Hot Wallet 3)",
         "0x68b22215ff74e3606bd5e6c1de8c2d68180c85f7": "EIP-7702 delegated account, delegate 0x47e747f5e8cb5819c966292dd969d989ae9dea5e; type exchange_wallet kept (BitMart 2 (winding down))",
-        "0x8696e84ab5e78983f2456bcb5c199eea9648c8c2": "EIP-7702 delegated account, delegate 0x17c11fddadac2b341f2455afe988fec4c3ba26e3; type cold_wallet kept (Coincheck Cold 2)"
+        "0x7afc12c8dd2e6591581d95586eb2c2a4905a12a9": "EIP-7702 delegated account, delegate 0x0000fb7702036ff9f76044a501ac1aa74cbab16b; type exchange_wallet kept (MoonPay 7)",
+        "0x8696e84ab5e78983f2456bcb5c199eea9648c8c2": "EIP-7702 delegated account, delegate 0x17c11fddadac2b341f2455afe988fec4c3ba26e3; type cold_wallet kept (Coincheck Cold 2)",
+        "0xc0c704bfc375b3fc657bc378b1cfee009194e2b3": "EIP-7702 delegated account, delegate 0x63c0c19a282a1b52b07dd5a65b58948a07dae32b; type exchange_wallet kept (LCX 1)",
+        "0xefda0cb780a8564903285ed25df3cc024f3b2982": "EIP-7702 delegated account, delegate 0xcc0c946eecf01a4bc76bc333ea74ceb04756f17b; type exchange_wallet kept (XT.com: Hot Wallet)"
       },
       "left_for_review": {
         "0x0bc7b31bf8ffac8213e496102167fe73fc30937a": "contract code, 3575 bytes, not a proxy or forwarder; type exchange_wallet kept, for review (Coinmetro 6)",
@@ -302,7 +305,7 @@
       }
     },
     "okx_sweep_destinations_2026_11_15": {
-      "rule": "OKX Ethereum wallets labelled outside the label store because ADR-0012 needs a deposit row's sweeps_to in this file as the same exchange's own wallet: each is listed in OKX's own proof-of-reserves file (Non Staking; the source below, as the por_2026_11_15 rows cite it), the release's on-chain classification classes it exchange_wallet, and OKX deposit addresses sweep into it. Typed exchange_wallet (role not recorded) or, holding contract code, contract_wallet with role exchange_wallet; no hot or cold role is claimed. Each row's sweep_basis gives the reading.",
+      "rule": "OKX Ethereum wallets labelled outside the label store because ADR-0012 needs a deposit row's sweeps_to in this file as the same exchange's own wallet: each is listed in OKX's own proof-of-reserves file (Non Staking; the source below, as the por_2026_11_15 rows cite it), the release's on-chain classification classes it exchange_wallet, and rows the release took as OKX deposit addresses swept into it (revised 16 Nov 2026, #328: for 13 of the 47 every such row was later found OKX-funded; see revised_2026_11_16). Typed exchange_wallet (role not recorded) or, holding contract code, contract_wallet with role exchange_wallet; no hot or cold role is claimed. Each row's sweep_basis gives the reading.",
       "source": {
         "url": "https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
         "archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
@@ -374,8 +377,112 @@
       "label_store": "every address is also among the rows staged for the label store's exchange_rows table (okx_por_ethereum.csv); the JSON row is read first (ADR-0011), and both name OKX",
       "added": {
         "OKX": 47
+      },
+      "revised_2026_11_16": {
+        "issue": "#328",
+        "why": "Each sweep_basis counted rows of okx_por_ethereum_deposits.dropped.tsv that swept into the wallet. That night the label-store build's internal-wallet filter removed rows funded by OKX's own wallets (rule A: no value from a non-OKX sender at or before the sweep; rule B: more than dust from an OKX wallet), because a deposit row must look like a customer deposit (ADR-0012). Those rows no longer count as deposit sweeps. No label is removed.",
+        "filter_file": {
+          "file": "okx_por_ethereum_deposits.dropped_internal.tsv",
+          "rows": 265,
+          "sha256": "91dedc07843934de890b53ec2ef35fa3f1277e6c1b5be436f1c222a1e738999e"
+        },
+        "counted_rows_file_sha256": "f2f4467858e5b3dc9d298fa1e0a38cae44f7ce031200caf90f2b8e899d0c7cf2",
+        "staged_after_filter": {
+          "file": "okx_por_ethereum_deposits.csv",
+          "rows": 4938,
+          "sha256": "55ec0382f9542bab6479bbf9bff2615ff64b9196466e3c55d9840e9c4be588b5"
+        },
+        "rows_counted": 821,
+        "rows_dropped_by_filter": 79,
+        "wallets_counted_dropped_left": {
+          "0x02c20fb5b2e24139e73bb9a56d32830c0dbfd54d": "2 counted, 2 dropped by the filter, 0 left",
+          "0x05d9617595e69ff577076355abc5e7c51ed0bdf3": "1 counted, 1 dropped by the filter, 0 left",
+          "0x0a9100ff165d3dab0c6172a7a2ad06b2e7ca09a0": "29 counted, 1 dropped by the filter, 28 left",
+          "0x0af6b0b2f1e8b1a259fffc70f2c19e177e4638c4": "1 counted, 1 dropped by the filter, 0 left",
+          "0x0d96b0525186c56aab001ff856313c85ced6bbe3": "2 counted, 1 dropped by the filter, 1 left",
+          "0x18b5efcfe83eb635030acfa460e01c1143cdb132": "9 counted, 2 dropped by the filter, 7 left",
+          "0x22f08491184f37ade8e71006eaa07906ea3e8b08": "5 counted, 1 dropped by the filter, 4 left",
+          "0x3c9df24f248ff949161a5a43bbf6dd69378d7799": "1 counted, 1 dropped by the filter, 0 left",
+          "0x48120be2162bf6d7b1c8ea04a150a530d294dcd0": "1 counted, 1 dropped by the filter, 0 left",
+          "0x50137e4f43c97b9638f5d7ba69f7dfcc3910ee89": "1 counted, 1 dropped by the filter, 0 left",
+          "0x55823001c8cd87a6e86716ca768bce51f2d89c9c": "28 counted, 5 dropped by the filter, 23 left",
+          "0x56df0bba3d324de9892f20f97e82f08fcd914f0e": "5 counted, 1 dropped by the filter, 4 left",
+          "0x5ca38fb7cf2b587026a1650f0d2b0a13c41f5d0f": "10 counted, 10 dropped by the filter, 0 left",
+          "0x72ec2e073324960a4ec15758bab80f9ffd53f903": "1 counted, 1 dropped by the filter, 0 left",
+          "0x7fea5b4568751533039179116e372e26b6b41b13": "1 counted, 1 dropped by the filter, 0 left",
+          "0x85310da935d2180139ea49df56dad447fce714ca": "11 counted, 1 dropped by the filter, 10 left",
+          "0x91d40e4818f4d4c57b4578d9eca6afc92ac8debe": "504 counted, 11 dropped by the filter, 493 left",
+          "0x9391466ad56f2705ce5fd12e763a65509aee4862": "3 counted, 1 dropped by the filter, 2 left",
+          "0x970d82aef119b99bc94213e592fe43812ec59a59": "7 counted, 2 dropped by the filter, 5 left",
+          "0x9938ee74ba7a5c1abcd157272a18fcfc9ec9e8d5": "43 counted, 8 dropped by the filter, 35 left",
+          "0xb0a27099582833c0cb8c7a0565759ff145113d64": "10 counted, 10 dropped by the filter, 0 left",
+          "0xbb96e1253431f8d0523cd8337ca85ce47f01e5e2": "2 counted, 2 dropped by the filter, 0 left",
+          "0xcd5bd47d3d1d8412b241ce9015c5032142948c12": "14 counted, 4 dropped by the filter, 10 left",
+          "0xcf3061b9e65f1f84d0839bb54d79a471eed7b11a": "15 counted, 1 dropped by the filter, 14 left",
+          "0xdce83237fbf279c4522e7cac4b10428e2b8694da": "10 counted, 10 dropped by the filter, 0 left",
+          "0xebf6c883a1d60ab38c8ed4780aadbfe4c805ed4f": "7 counted, 1 dropped by the filter, 6 left",
+          "0xf418263a6468c80d3bcb71033c56aacf81b241ba": "11 counted, 11 dropped by the filter, 0 left",
+          "0xf7b52be96b229dc63e6301bea175a1b5f756c274": "22 counted, 3 dropped by the filter, 19 left",
+          "0xff8a035ea6c80673f741c2265985ed976a40d390": "22 counted, 1 dropped by the filter, 21 left"
+        },
+        "no_customer_deposit_sweep_left": [
+          "0x02c20fb5b2e24139e73bb9a56d32830c0dbfd54d",
+          "0x05d9617595e69ff577076355abc5e7c51ed0bdf3",
+          "0x0af6b0b2f1e8b1a259fffc70f2c19e177e4638c4",
+          "0x3c9df24f248ff949161a5a43bbf6dd69378d7799",
+          "0x48120be2162bf6d7b1c8ea04a150a530d294dcd0",
+          "0x50137e4f43c97b9638f5d7ba69f7dfcc3910ee89",
+          "0x5ca38fb7cf2b587026a1650f0d2b0a13c41f5d0f",
+          "0x72ec2e073324960a4ec15758bab80f9ffd53f903",
+          "0x7fea5b4568751533039179116e372e26b6b41b13",
+          "0xb0a27099582833c0cb8c7a0565759ff145113d64",
+          "0xbb96e1253431f8d0523cd8337ca85ce47f01e5e2",
+          "0xdce83237fbf279c4522e7cac4b10428e2b8694da",
+          "0xf418263a6468c80d3bcb71033c56aacf81b241ba"
+        ],
+        "hand_check": {
+          "file": "okx_eth_deposit_drops_16nov.tsv (kept with the label-store build, not in this repository)",
+          "sha256": "b1842a93d6df7c066f39bc6621829df26e5cc09ee6ba69285e07657b60bd5819",
+          "method": "eth.blockscout.com API v2 (keyless), 16 Nov 2026: each address's transactions, token transfers and internal transactions; every hash below read again with eth_getTransactionByHash (rpc.mevblocker.io), 16 Nov 2026",
+          "finding": "each was funded 0.5 ETH by an OKX PoR wallet in blocks 25119483-25119485 (18 May 2026); 5 of each 10 also got 10 USDT from the Reserve Wallet in block 25126557 or 25126558; each one's only outgoing tx sends 0.25 ETH, or 5 USDT, back to the Reserve Wallet in block 25126685 (19 May 2026). Nothing else of value came in. That this was an OKX funding test is read from the pattern; OKX has not said so",
+          "tx_order": "each row lists its tx hashes comma-separated: funding, then the 10 USDT where there was one, then the return",
+          "funding_tests": {
+            "0x5ca38fb7cf2b587026a1650f0d2b0a13c41f5d0f": {
+              "funded_by": "0x0c48511102453352fe570370672cd556bf0e63f9",
+              "rows": {
+                "0x33c8b333e9b12dfc618f4cda2e655ed6f99fc981": "0xf07ac83fafbea65aa54990e184dcaf953a63d03e461753800ac90d0625606d49,0xe40ba41a3bd66ebb0eea2b6e5df492ee1af13347e7b27157337a30542a0734f9,0xe1e7b23830301f4e690d36b6a4579d741f8fda4debc4aa48b48b9be99d786dd8",
+                "0x3bf5d6216439e286b36e11b86f639d0adc81af94": "0xfbeb38c3d38af97357f0ad4f19bffb9d9d7ebd0633130acf708c9fc9db8d7745,0xdba166c38c6593d65ee6f191502a193c8e2adc570b0b7c1dfed73ac1a20acb41",
+                "0x512a749c20dce00d6b451f206e6cc607370b4ef8": "0xe4b624b7fe8fa7996986f1aae1a3aed58f6751bcb31507aae9285c17942f24cd,0x791d9565c8bc056991909a403007df2453b301a9932341f996f3d4274799fc59",
+                "0x55d6758d12eb8e40b869bed2b3b12f31033d69a2": "0x72b41186dab7646ae1b714a54c774c99e820bd42b218c43179e14d2ddeb302e1,0xb5724e9a0536f46f599448fd5f8626b8db339203e7cf2615367aab026c54ec6f",
+                "0x7fd71b2b0b226e79cd83e2ddb48b969da7000d8a": "0xed2368af900cc552606f8016d3723908207ab80daab4df227db72d383ac47f57,0x147d79b654eb60c68fc8326eadb50b7177d6a80edaa6b68d187cf05115b6e219,0xfc898eb549d7f1b90b89aa013a5e05c6ca295bc607021b2138971932e460c100",
+                "0xa798900a6b525ac66a0d5688fc1e9f59852de197": "0xed5599a06a5ccd57f336e1dbf5fce22abc60e843d7464060fb496ec2c44021b7,0x8451d08563b6933905037f4d62683e9041153735ec12fd6bb1fb438d9ad0611b,0xac2b222979b615044d54544b874b13ff7f4254b35b127a680855f1143ad00fc9",
+                "0xd3361bfd9cecbb3f002cfa8a8d8f3239f2f88d5e": "0xdd779d85a5d14693b673b23d240e9c85598eaaa2feacbb2b0085d391fd39b30b,0x3f55d399234ff4effbaed50e88eaf848c60ffa7f866979e0f0caff44d658adf5,0xaca26e41aff6cf2241c05962630fe3469f83943a5539b2485a4bcd7d79748d7d",
+                "0xdd3a30c09c660d39f0c6ecaf086c02b9266bc97f": "0x9179205a973ad0bff549ff7e6b72d67853c52fb1d069e05d91dff0db0700dd29,0xb79d0a83ed5174205ac814daf465c1b54a958ab45efac9b4f43ce574aa2a9c71",
+                "0xe00d4d0a5f014d2a5bc7101c37dfcf1cb4e8f62b": "0x7c2d5c58ed03435a064fa2e7fcc23e991409eeaa622b0beb74af79b1286bc79a,0xd4b58e2f6b42056d851869c787875f7ac0ad379ef62318ab48525b38766a133e",
+                "0xf6be7c4514c2cf82994d2e609285400f59a34864": "0x594c6cb30df8409091f4d36dd08785a80c1e91449d5d9e4885655bf045dd95e0,0xa66f046b660a37b1c68560ed4ab6f65dbd01d0799e114a907805ec0314a72eb7,0x1d5ecccaca6d215ff22194c428525074f6bf4ffb6099558affdb64d2350eed48"
+              }
+            },
+            "0xdce83237fbf279c4522e7cac4b10428e2b8694da": {
+              "funded_by": "0xd49522c289221697b416396e3d591aa3f98bc0a2",
+              "rows": {
+                "0x1c7f04fd42db4358fb6dd3602cebbd02e93401ad": "0x321b1d301d069894e6cb9f65c42851be79c8ea57a5d7576b5cd4f01e0f696f47,0x6c900b944b4a6ca5d4d8be28ec53ccefbe71b6525627eb5b032b446d391ea510",
+                "0x21feca4bbfc884a2af8b7e936f974bcf6845b129": "0x836c1fc974c0c7b66c9e2c8c9f91bafeee2239932aa6545053ba79f5b4498ef3,0xa37b0ea9be2a77912e46b2f56f2ebde84d2e0082e61a520c26fa92136d4b1c12",
+                "0x32703badef3204c15cb96a66391d0497449b85a2": "0x005d33ac00431a33bbf106bed2e256bd4efe57211d0e697a1e11f44258563cf9,0x1ae610d02e137dc5b15511fb2779079d665e187991aceb8d43100a2c4bae6dd5,0x95cf120192c60b7edee931173a47fcabb806223a8b7eab461d81d6469c2909cf",
+                "0x330b531bd9d81ee7b608f17763c8331e2efbfe61": "0xbe24dd7b214e6b79241030c22bda523ae4c2f0dae808e50591a8acb0c89a5b5b,0x49baafbdb027624c1ba0c9164871fbc97b8bc86b7040c10b47c7adc99c56ca54,0xf0d666b83d473de85097a5e03148a0d613d116d340c4e7c8f4eeabf7f5305d50",
+                "0x3447f37f33a983c94b2f24bd3ac20facacf7eb4c": "0x604f6513fbbbf0c0e270ed784a8ace75cb443b6f43183374828d01890e8a74cd,0x9056153f720ee27842cac5b39efdff72e5c99a1962fd9e404104d0ac4315038b,0x841ff57c32b275fd719a0775934b36fa4b55cad1350ef7a8358194871912e490",
+                "0x42e8d8b0a5744d245fce9c566408656984236bb3": "0xa512827318b6e9682e8c397f583fd0136a531a141fa6b728e30fa9b29964a7cd,0x58fd5e1daff10ec07253ace0e79e09632f799ee93c2c72d2f819e461dcb984ea",
+                "0x6b90f1d1c578e5bdf0bf4514b170e337f3b95d45": "0xa6442db99c9a3f6632eb32f3affeede8085df14975670b7bf052934f5b6078b1,0x7c17439115e82c4ccd28b75bf0a3c6ef1c55b6c81f888613eeb11426e6b696f2,0x9f9d459db3d0024eb878e0fe98683473c913156ea33c064cd51621536364dd6d",
+                "0xa6b4912836bcf5cf842646913994ffb8f5817346": "0xfc2252bfd4588bf21db0cf0bb9861005bfc95752ab769b511af2e557d6d1dd13,0xdc6c28cb594cb6ec66ed9cb042dcb53723f5a22d6f14bb1578457afa33b94ce4,0x12ab653d4df5a0b89ff95f021bbf6bd9e03f794644a81a34fc81ff08435b2cce",
+                "0xb22275b43638ab1542aef3874db53fdf78233b6b": "0x9d432442a5d478a2da2b66d441d1542defa76e368700660254a083ea5f202aab,0xe0f859917c6142a82f77a71a7d07cb10cebbd643876be9de8f7d323a9d466f3d",
+                "0xedeb2b3c2a1262e5790817612edbc8353898b460": "0x63c02f304888395189043080d1f9e8f0a11e392b448f0cb3ec4042cd6b7dbe4b,0x3867131f3c5fb8c4e5e9801090b75f3bb3199609cf6163c7397b3a96d472df83"
+              }
+            }
+          },
+          "not_counted": "0x8167a1ebf00ff5886d1b5908419bb1159d8cf6a4, an OKX relay that the filter also dropped, swept into OKX: Reserve Wallet 216 (#248), not into any wallet here, and no sweep_basis counted it"
+        }
       }
-    }
+    },
+    "fiu_named_exchanges": "108 wallets of exchanges FIU-IND acted against that had none here (Beldex 1, BingX 45, Bitrue 2, CEX.IO 1, Changelly 1, LBank 15, LCX 2, Mercuryo 1, MoonPay 8, Paxful 3, Phemex 3, ProBit Global 3, WOO X 7, XT.com 14, YouHodler 2) added from data/fiu_named_exchanges.json (15 Nov 2026 UTC; batch 1 #342, batch 2 #354, batch 3 #358), which records each one's source (the explorer's public name tag on the address's page) and what was left out and why."
   },
   "labels": {
     "0x05f51aab068caa6ab7eeb672f88c180f67f17ec7": {
@@ -127551,7 +127658,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 2 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 1,322"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 2 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 1,322; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 2 of those 2, so no deposit sweep is left behind this label, and no row of the filtered staged deposit file sweeps into it; the label rests on OKX's PoR file and the classification above"
     },
     "0x05d9617595e69ff577076355abc5e7c51ed0bdf3": {
       "exchange": "OKX",
@@ -127562,7 +127669,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000; stablecoins >= 100k), and 1 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 55,161"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000; stablecoins >= 100k), and 1 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 55,161; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 1 of those 1, so no deposit sweep is left behind this label, and no row of the filtered staged deposit file sweeps into it; the label rests on OKX's PoR file and the classification above"
     },
     "0x0a9100ff165d3dab0c6172a7a2ad06b2e7ca09a0": {
       "exchange": "OKX",
@@ -127573,7 +127680,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000; stablecoins >= 100k), and 29 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 68,338"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000; stablecoins >= 100k), and 29 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 68,338; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 1 of those 29, so 28 of them are left as deposit sweeps"
     },
     "0x0af6b0b2f1e8b1a259fffc70f2c19e177e4638c4": {
       "exchange": "OKX",
@@ -127584,7 +127691,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 1 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 3,775"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 1 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 3,775; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 1 of those 1, so no deposit sweep is left behind this label, and no row of the filtered staged deposit file sweeps into it; the label rests on OKX's PoR file and the classification above"
     },
     "0x0cd6db9cc8fd024bea83711f2dd1c1987dc566fc": {
       "exchange": "OKX",
@@ -127606,7 +127713,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 2 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 3,419"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 2 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 3,419; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 1 of those 2, so 1 of them are left as deposit sweeps"
     },
     "0x11b113383ce08e84001dc614f141ae4c27221e31": {
       "exchange": "OKX",
@@ -127629,7 +127736,7 @@
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
       "role": "exchange_wallet",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (contract code; stablecoins >= 100k), and 9 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: an EIP-1967 proxy whose 209 bytes of code are the same as OKX: Reserve Wallet 215's (0x445f16314284b43dfa1fd3cd77b9dea4a1bebd97, #248), nonce 1, not a token (no totalSupply); role exchange_wallet as the classification gives it (no hot or cold role claimed)"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (contract code; stablecoins >= 100k), and 9 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: an EIP-1967 proxy whose 209 bytes of code are the same as OKX: Reserve Wallet 215's (0x445f16314284b43dfa1fd3cd77b9dea4a1bebd97, #248), nonce 1, not a token (no totalSupply); role exchange_wallet as the classification gives it (no hot or cold role claimed); revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 2 of those 9, so 7 of them are left as deposit sweeps"
     },
     "0x1b8de2a8144bd40166ba49fc404e94582d28ffcc": {
       "exchange": "OKX",
@@ -127664,7 +127771,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 5 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 23,304"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 5 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 23,304; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 1 of those 5, so 4 of them are left as deposit sweeps"
     },
     "0x2f288e5e6b0d3243a0a9b18ee3cac401fe199b65": {
       "exchange": "OKX",
@@ -127698,7 +127805,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 1 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 87,073"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 1 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 87,073; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 1 of those 1, so no deposit sweep is left behind this label, and no row of the filtered staged deposit file sweeps into it; the label rests on OKX's PoR file and the classification above"
     },
     "0x48120be2162bf6d7b1c8ea04a150a530d294dcd0": {
       "exchange": "OKX",
@@ -127709,7 +127816,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 1 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 5,631"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 1 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 5,631; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 1 of those 1, so no deposit sweep is left behind this label, and no row of the filtered staged deposit file sweeps into it; the label rests on OKX's PoR file and the classification above"
     },
     "0x4a4aaa0155237881fbd5c34bfae16e985a7b068d": {
       "exchange": "OKX",
@@ -127731,7 +127838,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (>= 10 counterparties), and 1 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 111"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (>= 10 counterparties), and 1 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 111; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 1 of those 1, so no deposit sweep is left behind this label, and no row of the filtered staged deposit file sweeps into it; the label rests on OKX's PoR file and the classification above"
     },
     "0x55823001c8cd87a6e86716ca768bce51f2d89c9c": {
       "exchange": "OKX",
@@ -127742,7 +127849,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000; stablecoins >= 100k), and 28 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 96,106"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000; stablecoins >= 100k), and 28 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 96,106; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 5 of those 28, so 23 of them are left as deposit sweeps"
     },
     "0x566ca397c22dac32e4f8219d9de24d5cb88d78ed": {
       "exchange": "OKX",
@@ -127764,7 +127871,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000; ETH >= 50), and 5 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 6,013"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000; ETH >= 50), and 5 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 6,013; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 1 of those 5, so 4 of them are left as deposit sweeps"
     },
     "0x5ca38fb7cf2b587026a1650f0d2b0a13c41f5d0f": {
       "exchange": "OKX",
@@ -127775,7 +127882,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (stablecoins >= 100k; ETH >= 50), and 10 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 246"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (stablecoins >= 100k; ETH >= 50), and 10 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 246; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 10 of those 10, so no deposit sweep is left behind this label, and no row of the filtered staged deposit file sweeps into it; the label rests on OKX's PoR file and the classification above; a 16 Nov 2026 hand check (keyless Blockscout reads; hashes rechecked with eth_getTransactionByHash) found each of the 10 was funded 0.5 ETH by OKX PoR wallet 0x0c48511102453352fe570370672cd556bf0e63f9 on 18 May 2026 and sent 0.25 ETH or 5 USDT back to this wallet in block 25126685, an OKX funding test (e.g. funding 0xfbeb38c3d38af97357f0ad4f19bffb9d9d7ebd0633130acf708c9fc9db8d7745, return 0xdba166c38c6593d65ee6f191502a193c8e2adc570b0b7c1dfed73ac1a20acb41; all 10 in _meta.okx_sweep_destinations_2026_11_15.revised_2026_11_16)"
     },
     "0x72ec2e073324960a4ec15758bab80f9ffd53f903": {
       "exchange": "OKX",
@@ -127786,7 +127893,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000; stablecoins >= 100k), and 1 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 1,611"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000; stablecoins >= 100k), and 1 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 1,611; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 1 of those 1, so no deposit sweep is left behind this label, and no row of the filtered staged deposit file sweeps into it; the label rests on OKX's PoR file and the classification above"
     },
     "0x748d97a351511f901964a71fa6077267af2d35c8": {
       "exchange": "OKX",
@@ -127819,7 +127926,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 1 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 1,413"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 1 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 1,413; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 1 of those 1, so no deposit sweep is left behind this label, and no row of the filtered staged deposit file sweeps into it; the label rests on OKX's PoR file and the classification above"
     },
     "0x85310da935d2180139ea49df56dad447fce714ca": {
       "exchange": "OKX",
@@ -127831,7 +127938,7 @@
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
       "role": "exchange_wallet",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (contract code; stablecoins >= 100k), and 11 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: an EIP-1967 proxy whose 209 bytes of code are the same as OKX: Reserve Wallet 215's (0x445f16314284b43dfa1fd3cd77b9dea4a1bebd97, #248), nonce 1, not a token (no totalSupply); role exchange_wallet as the classification gives it (no hot or cold role claimed)"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (contract code; stablecoins >= 100k), and 11 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: an EIP-1967 proxy whose 209 bytes of code are the same as OKX: Reserve Wallet 215's (0x445f16314284b43dfa1fd3cd77b9dea4a1bebd97, #248), nonce 1, not a token (no totalSupply); role exchange_wallet as the classification gives it (no hot or cold role claimed); revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 1 of those 11, so 10 of them are left as deposit sweeps"
     },
     "0x91d40e4818f4d4c57b4578d9eca6afc92ac8debe": {
       "exchange": "OKX",
@@ -127842,7 +127949,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 504 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 1,275,152"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 504 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 1,275,152; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 11 of those 504, so 493 of them are left as deposit sweeps"
     },
     "0x9391466ad56f2705ce5fd12e763a65509aee4862": {
       "exchange": "OKX",
@@ -127853,7 +127960,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000; stablecoins >= 100k), and 3 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 170,892"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000; stablecoins >= 100k), and 3 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 170,892; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 1 of those 3, so 2 of them are left as deposit sweeps"
     },
     "0x96fdc631f02207b72e5804428dee274cf2ac0bcd": {
       "exchange": "OKX",
@@ -127875,7 +127982,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 7 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 14,629"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 7 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 14,629; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 2 of those 7, so 5 of them are left as deposit sweeps"
     },
     "0x9938ee74ba7a5c1abcd157272a18fcfc9ec9e8d5": {
       "exchange": "OKX",
@@ -127886,7 +127993,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 43 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 41,819"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 43 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 41,819; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 8 of those 43, so 35 of them are left as deposit sweeps"
     },
     "0x9c308b1665097af7ab2e38a41577bfecdc2d1c5c": {
       "exchange": "OKX",
@@ -127919,7 +128026,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000; stablecoins >= 100k; ETH >= 50), and 10 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 24,577"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000; stablecoins >= 100k; ETH >= 50), and 10 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 24,577; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 10 of those 10, so no deposit sweep is left behind this label, and no row of the filtered staged deposit file sweeps into it; the label rests on OKX's PoR file and the classification above"
     },
     "0xb4625df7d1bbce0547fe37a4c4e5bab22df529f4": {
       "exchange": "OKX",
@@ -127941,7 +128048,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 2 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 2,852"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 2 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 2,852; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 2 of those 2, so no deposit sweep is left behind this label, and no row of the filtered staged deposit file sweeps into it; the label rests on OKX's PoR file and the classification above"
     },
     "0xcd5bd47d3d1d8412b241ce9015c5032142948c12": {
       "exchange": "OKX",
@@ -127952,7 +128059,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 14 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 33,826"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 14 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 33,826; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 4 of those 14, so 10 of them are left as deposit sweeps"
     },
     "0xcf1ff3f452043a6c871720616f663c032ab3798d": {
       "exchange": "OKX",
@@ -127974,7 +128081,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000; stablecoins >= 100k), and 15 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 33,357"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000; stablecoins >= 100k), and 15 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 33,357; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 1 of those 15, so 14 of them are left as deposit sweeps"
     },
     "0xd19d3341227967610b94e7aebe8c971d2d48f419": {
       "exchange": "OKX",
@@ -128007,7 +128114,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (stablecoins >= 100k; ETH >= 50), and 10 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 175"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (stablecoins >= 100k; ETH >= 50), and 10 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 175; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 10 of those 10, so no deposit sweep is left behind this label, and no row of the filtered staged deposit file sweeps into it; the label rests on OKX's PoR file and the classification above; a 16 Nov 2026 hand check (keyless Blockscout reads; hashes rechecked with eth_getTransactionByHash) found each of the 10 was funded 0.5 ETH by OKX PoR wallet 0xd49522c289221697b416396e3d591aa3f98bc0a2 on 18 May 2026 and sent 0.25 ETH or 5 USDT back to this wallet in block 25126685, an OKX funding test (e.g. funding 0x321b1d301d069894e6cb9f65c42851be79c8ea57a5d7576b5cd4f01e0f696f47, return 0x6c900b944b4a6ca5d4d8be28ec53ccefbe71b6525627eb5b032b446d391ea510; all 10 in _meta.okx_sweep_destinations_2026_11_15.revised_2026_11_16)"
     },
     "0xebf6c883a1d60ab38c8ed4780aadbfe4c805ed4f": {
       "exchange": "OKX",
@@ -128019,7 +128126,7 @@
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
       "role": "exchange_wallet",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (contract code), and 7 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: an EIP-1967 proxy whose 209 bytes of code are the same as OKX: Reserve Wallet 215's (0x445f16314284b43dfa1fd3cd77b9dea4a1bebd97, #248), nonce 1, not a token (no totalSupply); role exchange_wallet as the classification gives it (no hot or cold role claimed)"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (contract code), and 7 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: an EIP-1967 proxy whose 209 bytes of code are the same as OKX: Reserve Wallet 215's (0x445f16314284b43dfa1fd3cd77b9dea4a1bebd97, #248), nonce 1, not a token (no totalSupply); role exchange_wallet as the classification gives it (no hot or cold role claimed); revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 1 of those 7, so 6 of them are left as deposit sweeps"
     },
     "0xf418263a6468c80d3bcb71033c56aacf81b241ba": {
       "exchange": "OKX",
@@ -128030,7 +128137,7 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000; stablecoins >= 100k; ETH >= 50), and 11 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 5,744"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000; stablecoins >= 100k; ETH >= 50), and 11 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 5,744; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 11 of those 11, so no deposit sweep is left behind this label, and no row of the filtered staged deposit file sweeps into it; the label rests on OKX's PoR file and the classification above"
     },
     "0xf7b52be96b229dc63e6301bea175a1b5f756c274": {
       "exchange": "OKX",
@@ -128042,7 +128149,7 @@
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
       "role": "exchange_wallet",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (contract code), and 22 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: an EIP-1967 proxy whose 209 bytes of code are the same as OKX: Reserve Wallet 215's (0x445f16314284b43dfa1fd3cd77b9dea4a1bebd97, #248), nonce 1, not a token (no totalSupply); role exchange_wallet as the classification gives it (no hot or cold role claimed)"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (contract code), and 22 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: an EIP-1967 proxy whose 209 bytes of code are the same as OKX: Reserve Wallet 215's (0x445f16314284b43dfa1fd3cd77b9dea4a1bebd97, #248), nonce 1, not a token (no totalSupply); role exchange_wallet as the classification gives it (no hot or cold role claimed); revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 3 of those 22, so 19 of them are left as deposit sweeps"
     },
     "0xfe908731af54c56dfd63948f18ce5878a3b8a1ad": {
       "exchange": "OKX",
@@ -128064,7 +128171,547 @@
       "source_archive": "https://web.archive.org/web/20261114215251/https://static.okx.com/cdn/okx/por/chain/por_csv_2026110100_V1.zip",
       "source_date": "2026-11-01",
       "retrieved": "2026-11-14",
-      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 22 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 124,545"
+      "sweep_basis": "In the 15 Nov 2026 label-store release, okx_por_ethereum_classified.csv (keyless reads of all 17,046 OKX Ethereum PoR rows) classes it exchange_wallet (nonce >= 1000), and 22 OKX PoR addresses that file classes deposit_wallet (PoR + sweeps) sent it value (okx_por_ethereum_deposits.dropped.tsv); read again 15 Nov 2026: no code, nonce 124,545; revised 16 Nov 2026 (#328): the label-store build's internal-wallet filter (okx_por_ethereum_deposits.dropped_internal.tsv; funded by OKX's own wallets, so not taken as customer deposits) dropped 1 of those 22, so 21 of them are left as deposit sweeps"
+    },
+    "0x065ac3d33fec104fba9f2f4d674afaa7c4ebcf43": {
+      "exchange": "BingX",
+      "label": "BingX 27",
+      "type": "exchange_wallet"
+    },
+    "0x2b3bf74b29f59fb8dda41cf3d6a8da28cf8e7921": {
+      "exchange": "BingX",
+      "label": "BingX 29",
+      "type": "exchange_wallet"
+    },
+    "0x2b9287402e077f866a067176217ee6ec0e24e4cc": {
+      "exchange": "BingX",
+      "label": "BingX 47",
+      "type": "exchange_wallet"
+    },
+    "0x2eecc9026534fd430ac83c5007b068476fc5dc1f": {
+      "exchange": "BingX",
+      "label": "BingX 44",
+      "type": "exchange_wallet"
+    },
+    "0x406c22b8740ae955b04fd11c2061e053807e2a69": {
+      "exchange": "BingX",
+      "label": "BingX 9",
+      "type": "exchange_wallet"
+    },
+    "0x434742703055bd20f42142d9d70b0735a5eb1b14": {
+      "exchange": "BingX",
+      "label": "BingX 48",
+      "type": "exchange_wallet"
+    },
+    "0x4597a8206978c5de22173432b2f0cb899eef9fa3": {
+      "exchange": "BingX",
+      "label": "BingX 10",
+      "type": "exchange_wallet"
+    },
+    "0x474ac5cb62d7acedc9990d4daafa0c39d9478fbb": {
+      "exchange": "BingX",
+      "label": "BingX 7",
+      "type": "exchange_wallet"
+    },
+    "0x47dd7b40346037d7ca47d45e40c66a2f351edb20": {
+      "exchange": "BingX",
+      "label": "BingX 43",
+      "type": "exchange_wallet"
+    },
+    "0x5286530c8a31dec3f523200832d10378239bea66": {
+      "exchange": "BingX",
+      "label": "BingX 37",
+      "type": "exchange_wallet"
+    },
+    "0x58900914802109a1c1010526eaf34399a75f2288": {
+      "exchange": "BingX",
+      "label": "BingX 17",
+      "type": "exchange_wallet"
+    },
+    "0x62a6557a60ee2920b55ca5f11b707844ffb61b11": {
+      "exchange": "BingX",
+      "label": "BingX 38",
+      "type": "exchange_wallet"
+    },
+    "0x62d96cf5bea5970689c651fc103bb5b80c5bcec1": {
+      "exchange": "BingX",
+      "label": "BingX 49",
+      "type": "exchange_wallet"
+    },
+    "0x66486b5534abf6403fef2b4d8aefa5425de28cf3": {
+      "exchange": "BingX",
+      "label": "BingX 52",
+      "type": "exchange_wallet"
+    },
+    "0x6bb65f31ee5567cc9a92ddd29b6d076cd674d4c6": {
+      "exchange": "BingX",
+      "label": "BingX 30",
+      "type": "exchange_wallet"
+    },
+    "0x6c69fa64ec451b1bc5b5fbaa56cf648a281634be": {
+      "exchange": "BingX",
+      "label": "BingX 15",
+      "type": "exchange_wallet"
+    },
+    "0x72348778639788e0226f9e91aeb83a07b496665d": {
+      "exchange": "BingX",
+      "label": "BingX 36",
+      "type": "exchange_wallet"
+    },
+    "0x74b0e133bee3384dfcfa60b31d85d8e2062de811": {
+      "exchange": "BingX",
+      "label": "BingX 40",
+      "type": "exchange_wallet"
+    },
+    "0x766182bfa8b8790d61c4d7e7912c1c3a6f42cef6": {
+      "exchange": "BingX",
+      "label": "BingX 3",
+      "type": "exchange_wallet"
+    },
+    "0x78751991f163081b432b3e84a9f1e9ec96c9c701": {
+      "exchange": "BingX",
+      "label": "BingX 32",
+      "type": "exchange_wallet"
+    },
+    "0x7b0d89a97c6749f30c0f527281700f170007947b": {
+      "exchange": "BingX",
+      "label": "BingX 54",
+      "type": "exchange_wallet"
+    },
+    "0x7c217eb128337c4b44ca9093ea9a9984b1803488": {
+      "exchange": "BingX",
+      "label": "BingX 24",
+      "type": "exchange_wallet"
+    },
+    "0x9bd8135e586161753bee9c3be2b6cdd25ebeb346": {
+      "exchange": "BingX",
+      "label": "BingX 33",
+      "type": "exchange_wallet"
+    },
+    "0xa0fca8fa8e9c6aa77305f94be0e03908d0a42900": {
+      "exchange": "BingX",
+      "label": "BingX 5",
+      "type": "exchange_wallet"
+    },
+    "0xa1ca8b54cb25fb0bd2090061e63e13016a6f2e11": {
+      "exchange": "BingX",
+      "label": "BingX 6",
+      "type": "exchange_wallet"
+    },
+    "0xa4512426342fb6bbb48d6c6a1a35efde929e7773": {
+      "exchange": "BingX",
+      "label": "BingX 51",
+      "type": "exchange_wallet"
+    },
+    "0xa60efe89e07cfcf83eb30f3b063834f0f8b30466": {
+      "exchange": "BingX",
+      "label": "BingX 42",
+      "type": "exchange_wallet"
+    },
+    "0xa88f86e5685fca7c5d6de0e4d944875b007137b5": {
+      "exchange": "BingX",
+      "label": "BingX 8",
+      "type": "exchange_wallet"
+    },
+    "0xaf1e33f8153f25e304dec5cb544b5b6ccc5520ed": {
+      "exchange": "BingX",
+      "label": "BingX 23",
+      "type": "exchange_wallet"
+    },
+    "0xb994d148aa9a45f4182bce93f53e9e07949b55e6": {
+      "exchange": "BingX",
+      "label": "BingX 45",
+      "type": "exchange_wallet"
+    },
+    "0xbb936d7cd3cdc6ac01088916d939ca5207cd84c2": {
+      "exchange": "BingX",
+      "label": "BingX 12",
+      "type": "exchange_wallet"
+    },
+    "0xbcea70b89fb6eabace33b8ba7a7f719e8782981c": {
+      "exchange": "BingX",
+      "label": "BingX 53",
+      "type": "exchange_wallet"
+    },
+    "0xc3dcd744db3f114f0edf03682b807b78a227bf74": {
+      "exchange": "BingX",
+      "label": "BingX 20",
+      "type": "exchange_wallet"
+    },
+    "0xc4334a9af50c80a12c484de643149f6159bdd110": {
+      "exchange": "BingX",
+      "label": "BingX 4",
+      "type": "exchange_wallet"
+    },
+    "0xc62559777bf2f5aeef9ad924519a463ede374d09": {
+      "exchange": "BingX",
+      "label": "BingX 50",
+      "type": "exchange_wallet"
+    },
+    "0xc65d821383c20421cc89f622478c39a9e3d1e0c6": {
+      "exchange": "BingX",
+      "label": "BingX 34",
+      "type": "exchange_wallet"
+    },
+    "0xcb95ca610c91629c835b129355999b7acdc4cc06": {
+      "exchange": "BingX",
+      "label": "BingX 28",
+      "type": "exchange_wallet"
+    },
+    "0xd38cf87f114f2a0582c329fb9df4f7044ce71330": {
+      "exchange": "BingX",
+      "label": "BingX 26",
+      "type": "exchange_wallet"
+    },
+    "0xda43c54ce5083885f561e05fd6220b7096be246c": {
+      "exchange": "BingX",
+      "label": "BingX 2",
+      "type": "exchange_wallet"
+    },
+    "0xe18bb692ae7d58982c62621a3d13743d23de852f": {
+      "exchange": "BingX",
+      "label": "BingX 35",
+      "type": "exchange_wallet"
+    },
+    "0xe4516477adacc6682cf18069475f676a5b5667f9": {
+      "exchange": "BingX",
+      "label": "BingX 14",
+      "type": "exchange_wallet"
+    },
+    "0xed5e461999b1fedd00797a818edd75c727ed948f": {
+      "exchange": "BingX",
+      "label": "BingX 13",
+      "type": "exchange_wallet"
+    },
+    "0xef317e433b0836f294866d43f67d6871b609b351": {
+      "exchange": "BingX",
+      "label": "BingX 39",
+      "type": "exchange_wallet"
+    },
+    "0xefa02443139f31e0336608e5a2f99d26784e4bfd": {
+      "exchange": "BingX",
+      "label": "BingX 11",
+      "type": "exchange_wallet"
+    },
+    "0xf28f8f8dd8cf0b5eeed05c51167de5390418efdd": {
+      "exchange": "BingX",
+      "label": "BingX 31",
+      "type": "exchange_wallet"
+    },
+    "0x6cc8dcbca746a6e4fdefb98e1d0df903b107fd21": {
+      "exchange": "Bitrue",
+      "label": "Bitrue",
+      "type": "exchange_wallet"
+    },
+    "0xd205a958527f083f1b222061b4d60d147fec5044": {
+      "exchange": "Bitrue",
+      "label": "Bitrue 2",
+      "type": "exchange_wallet"
+    },
+    "0x0e80abb31ace45ae26f9a2943acaab72e77de9be": {
+      "exchange": "LBank",
+      "label": "LBank 5",
+      "type": "exchange_wallet"
+    },
+    "0x11b1e83818028a8f44ef84613d5c058734b2d5cf": {
+      "exchange": "LBank",
+      "label": "LBank 3",
+      "type": "exchange_wallet"
+    },
+    "0x120051a72966950b8ce12eb5496b5d1eeec1541b": {
+      "exchange": "LBank",
+      "label": "LBank: Hot Wallet 3",
+      "type": "exchange_wallet"
+    },
+    "0x22f83e4b9cb95cb99b88e8f4f15ea598c74c2788": {
+      "exchange": "LBank",
+      "label": "LBank 1",
+      "type": "exchange_wallet"
+    },
+    "0x43cbdc908a0860ae23fa06aa5b20dfee43c196a6": {
+      "exchange": "LBank",
+      "label": "LBank 2",
+      "type": "exchange_wallet"
+    },
+    "0x4ef08512caf43cba05fda863da662942b258b237": {
+      "exchange": "LBank",
+      "label": "LBank 20",
+      "type": "exchange_wallet"
+    },
+    "0x74922ba81e614520f5321d9229852f7d65541bc3": {
+      "exchange": "LBank",
+      "label": "LBank 21",
+      "type": "exchange_wallet"
+    },
+    "0x7ff77c761e5669d1696059a3b46cda0ae293aae3": {
+      "exchange": "LBank",
+      "label": "LBank 4",
+      "type": "exchange_wallet"
+    },
+    "0xa1b8a51aa3e5c4c98988b45eeabfc0baed08e660": {
+      "exchange": "LBank",
+      "label": "LBank 18",
+      "type": "exchange_wallet"
+    },
+    "0xa690621b1d2f8cc06de2de11e4cf69935f82655a": {
+      "exchange": "LBank",
+      "label": "LBank: Hot Wallet 6",
+      "type": "exchange_wallet"
+    },
+    "0xb0e5ec2a0bb8b8f3a727787f90b959611e4062b7": {
+      "exchange": "LBank",
+      "label": "LBank: Hot Wallet 9",
+      "type": "exchange_wallet"
+    },
+    "0xc06e0513a150a021104fdcdd20ce362fa593ba1f": {
+      "exchange": "LBank",
+      "label": "LBank: Hot Wallet 2",
+      "type": "exchange_wallet"
+    },
+    "0xe0f0aa98b4a4d305ac4a04d830c96a158bda9cd8": {
+      "exchange": "LBank",
+      "label": "LBank: Hot Wallet 8",
+      "type": "exchange_wallet"
+    },
+    "0xe5a8b35eaa3c14e0a6514f800825e1e6687bf23e": {
+      "exchange": "LBank",
+      "label": "LBank: Hot Wallet 4",
+      "type": "exchange_wallet"
+    },
+    "0xfa9f7a1cbfbcb688729c522b4f0905ccf4d26d25": {
+      "exchange": "LBank",
+      "label": "LBank: Hot Wallet 7",
+      "type": "exchange_wallet"
+    },
+    "0x35d2d03607b9155b42cf673102fe58251ac4f644": {
+      "exchange": "Phemex",
+      "label": "Phemex 3",
+      "type": "exchange_wallet"
+    },
+    "0x50be13b54f3eebbe415d20250598d81280e56772": {
+      "exchange": "Phemex",
+      "label": "Phemex",
+      "type": "exchange_wallet"
+    },
+    "0xf7d13c7dbec85ff86ee815f6dcbb3dedac78ca49": {
+      "exchange": "Phemex",
+      "label": "Phemex 2",
+      "type": "exchange_wallet"
+    },
+    "0x07888c3c5d25fa74ae04a9ead1fb1cf0e7743689": {
+      "exchange": "XT.com",
+      "label": "XT.com 4",
+      "type": "exchange_wallet"
+    },
+    "0x104703893f56243c0e56441a99eb3f32e1ed6ad2": {
+      "exchange": "XT.com",
+      "label": "XT.com 3",
+      "type": "exchange_wallet"
+    },
+    "0x3fcad6c6fb6bffbb3585f2a401fbc87a6719d28d": {
+      "exchange": "XT.com",
+      "label": "XT.com 12",
+      "type": "exchange_wallet"
+    },
+    "0x61459d345779b9d8ceaf2b1472a60805cb699aae": {
+      "exchange": "XT.com",
+      "label": "XT.com 18",
+      "type": "exchange_wallet"
+    },
+    "0x80309282231e9e01c74c4e0efed35b063e6c5d27": {
+      "exchange": "XT.com",
+      "label": "XT.com 9",
+      "type": "exchange_wallet"
+    },
+    "0x8c395e3fb26939438acd5ca4be7684752829e269": {
+      "exchange": "XT.com",
+      "label": "XT.com 10",
+      "type": "exchange_wallet"
+    },
+    "0x98a79dbf216daef423bab001e23795f606bf7c2e": {
+      "exchange": "XT.com",
+      "label": "XT.com 19",
+      "type": "exchange_wallet"
+    },
+    "0xb082e500faecb492e87f0176b38c2626a185ddd7": {
+      "exchange": "XT.com",
+      "label": "XT.com 13",
+      "type": "exchange_wallet"
+    },
+    "0xcab044b301d94875ac1502b73e54d63b0162c70f": {
+      "exchange": "XT.com",
+      "label": "XT.com 7",
+      "type": "exchange_wallet"
+    },
+    "0xde65ff89287c1a8da978d4c6b31edc3fc664f019": {
+      "exchange": "XT.com",
+      "label": "XT.com 15",
+      "type": "exchange_wallet"
+    },
+    "0xe0a616c3659be29567e08819772e6905307adf21": {
+      "exchange": "XT.com",
+      "label": "XT.com 2",
+      "type": "exchange_wallet"
+    },
+    "0xe5b8ff1ca1c3ef2ac704783d6473ee5a9be7e02d": {
+      "exchange": "XT.com",
+      "label": "XT.com 6",
+      "type": "exchange_wallet"
+    },
+    "0xea04c61512eb2ef00a7ac89fb812c66b7118b60d": {
+      "exchange": "XT.com",
+      "label": "XT.com 16",
+      "type": "exchange_wallet"
+    },
+    "0xefda0cb780a8564903285ed25df3cc024f3b2982": {
+      "exchange": "XT.com",
+      "label": "XT.com: Hot Wallet",
+      "type": "exchange_wallet"
+    },
+    "0x03dd167d62e1dfc223ffd7b37fc8bf45fb973478": {
+      "exchange": "WOO X",
+      "label": "Woo X 1",
+      "type": "exchange_wallet"
+    },
+    "0x0b5c4a7fcda49e0a8661419bb55b86161a86db2a": {
+      "exchange": "MoonPay",
+      "label": "MoonPay 5",
+      "type": "exchange_wallet"
+    },
+    "0x1440ec793ae50fa046b95bfeca5af475b6003f9e": {
+      "exchange": "MoonPay",
+      "label": "MoonPay 2",
+      "type": "exchange_wallet"
+    },
+    "0x151b381058f91cf871e7ea1ee83c45326f61e96d": {
+      "exchange": "MoonPay",
+      "label": "MoonPay 4",
+      "type": "exchange_wallet"
+    },
+    "0x17f1a51da68d27c94d2a51d92b27b5bd4718b986": {
+      "exchange": "Paxful",
+      "label": "Paxful 1",
+      "type": "exchange_wallet"
+    },
+    "0x1e6dce7ce381774286abb8c9aac461bb7b1c4b05": {
+      "exchange": "WOO X",
+      "label": "Woo X 5",
+      "type": "exchange_wallet"
+    },
+    "0x1f973b233f5ebb1e5d7cfe51b9ae4a32415a3a08": {
+      "exchange": "CEX.IO",
+      "label": "CEX.IO 2",
+      "type": "exchange_wallet"
+    },
+    "0x22f6cc8738308a8c92a6a71ea67832463d1fec0d": {
+      "exchange": "MoonPay",
+      "label": "MoonPay 8",
+      "type": "exchange_wallet"
+    },
+    "0x594203e46e0b41b1edb54a551e7784c194d1335b": {
+      "exchange": "WOO X",
+      "label": "Woo X 7",
+      "type": "exchange_wallet"
+    },
+    "0x607e062e3986a16283047beaed1a7dc3e220ff0e": {
+      "exchange": "WOO X",
+      "label": "Woo X 8",
+      "type": "exchange_wallet"
+    },
+    "0x63dfe4e34a3bfc00eb0220786238a7c6cef8ffc4": {
+      "exchange": "WOO X",
+      "label": "Woo X 2",
+      "type": "exchange_wallet"
+    },
+    "0x72e5263ff33d2494692d7f94a758aa9f82062f73": {
+      "exchange": "ProBit Global",
+      "label": "ProBit 1",
+      "type": "exchange_wallet"
+    },
+    "0x777d4627e31863b2a49e2985af46525f21a9846c": {
+      "exchange": "Paxful",
+      "label": "Paxful 3",
+      "type": "exchange_wallet"
+    },
+    "0x7a20527ba5a749b3b054a821950bfcc2c01b959f": {
+      "exchange": "Paxful",
+      "label": "Paxful 2",
+      "type": "exchange_wallet"
+    },
+    "0x7afc12c8dd2e6591581d95586eb2c2a4905a12a9": {
+      "exchange": "MoonPay",
+      "label": "MoonPay 7",
+      "type": "exchange_wallet"
+    },
+    "0xad285fdedfc0d5f944a33e478356524293c7ec68": {
+      "exchange": "ProBit Global",
+      "label": "ProBit 3",
+      "type": "exchange_wallet"
+    },
+    "0xb287eac48ab21c5fb1d3723830d60b4c797555b0": {
+      "exchange": "MoonPay",
+      "label": "MoonPay 9",
+      "type": "exchange_wallet"
+    },
+    "0xbc4e4069b1cb2fc1256a2bf454ae3affb4e05a4d": {
+      "exchange": "LCX",
+      "label": "LCX Exchange",
+      "type": "exchange_wallet"
+    },
+    "0xc0c704bfc375b3fc657bc378b1cfee009194e2b3": {
+      "exchange": "LCX",
+      "label": "LCX 1",
+      "type": "exchange_wallet"
+    },
+    "0xd108fd0e8c8e71552a167e7a44ff1d345d233ba6": {
+      "exchange": "MoonPay",
+      "label": "MoonPay 3",
+      "type": "exchange_wallet"
+    },
+    "0xd42f958e1c3e2a10e5d66343c4c9a57726e5b4b6": {
+      "exchange": "MoonPay",
+      "label": "MoonPay 6",
+      "type": "exchange_wallet"
+    },
+    "0xe505bf08c03cc0fa4e0fdfa2487e2c11085b3fd9": {
+      "exchange": "WOO X",
+      "label": "Woo X 3",
+      "type": "exchange_wallet"
+    },
+    "0xeef97691d3307b4e61522170f648ee2df1312fee": {
+      "exchange": "WOO X",
+      "label": "Woo X 6",
+      "type": "exchange_wallet"
+    },
+    "0xf71afe21cd32959113fc47ae2ef886b43a9413d5": {
+      "exchange": "ProBit Global",
+      "label": "ProBit 2",
+      "type": "exchange_wallet"
+    },
+    "0x258b7b9a1ba92f47f5f4f5e733293477620a82cb": {
+      "exchange": "Beldex",
+      "label": "Beldex",
+      "type": "exchange_wallet"
+    },
+    "0x260ee8f2b0c167e0cd6119b2df923fd061dc1093": {
+      "exchange": "YouHodler",
+      "label": "YouHodler",
+      "type": "exchange_wallet"
+    },
+    "0x2f1f7fc76e6cf5ab3e186a2a2fd4fc31952a77cc": {
+      "exchange": "YouHodler",
+      "label": "YouHodler 1",
+      "type": "exchange_wallet"
+    },
+    "0x8c8d7c46219d9205f056f28fee5950ad564d7465": {
+      "exchange": "Mercuryo",
+      "label": "mercuryo",
+      "type": "exchange_wallet"
+    },
+    "0x96fc4553a00c117c5b0bed950dd625d1c16dc894": {
+      "exchange": "Changelly",
+      "label": "Changelly",
+      "type": "exchange_wallet"
     }
   },
   "_unverified_pending": {

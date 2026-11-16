@@ -43,6 +43,11 @@
   - A sent request is flagged for follow-up after 7 days (`FOLLOW_UP_DAYS`), and #124 turns that flag into a "Follow up" task. A letter of request goes through the MHA and a foreign Central Authority and takes months, so 7 days was noise.
   - `freeze_requests.follow_up_days(kind)`: 30 days for `letter-rogatory` (`FOLLOW_UP_DAYS_BY_KIND`), 7 for every other kind. 30 days is an internal reminder interval the team chose, not a legal or MHA deadline.
   - Only the `follow_up` flag in `summary` changed, so the change stays clear of `feat/signoff-binding` (#133). The screens and #124 read the flag the server sends; neither has a 7-day number of its own.
+- **A label-store row's basis (#348, PR #349).** When the case's exchange address came from a label-store exchange
+  row (`matches[].attribution_basis`, set only with `EXCHEQUER_STORE_EXCHANGE_ROWS` on), the Statement of Facts
+  prints `report.basis_lines` right after the claim, as the report and the exchange letter do: the list, and for a
+  deposit row the sweep, worded as an inference from public records that only the exchange can confirm. Without the
+  field the draft is byte for byte as before (`backend/tests/test_letter_of_request_store_basis.py`, SHA-256 pin).
 
 - **Figure 3.6's other columns and the MHA's current list (#352, #353).** Data only; no draft or note changes.
   - `backend/data/mha_mlat_central_authorities.txt`: Figure 3.6's Central Authority (name and postal address; telephone, fax and web lines left out), e-mail, language requirement and specifications for each of the 42 rows, same names and order as `mha_mlat_countries.txt`, with footnotes 12 (mandatory assurances) and 13 (foreign law immunity certificate). Same PDF, SHA-256 re-checked (`a318fde9...ffbe2`). PDF pages 27 to 30 (printed [25] to [28]) rendered to PNG (PDFKit, 2.5x and 5x) and every cell read from the images, OCR only as a first draft. Printed slips kept as printed and named in the header (Kyrgyzstan's Kazakhstan address, two truncated e-mails).

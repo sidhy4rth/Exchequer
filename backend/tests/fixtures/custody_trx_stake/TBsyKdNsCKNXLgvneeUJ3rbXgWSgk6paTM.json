@@ -1,0 +1,64 @@
+{
+ "_meta": {
+  "address": "TBsyKdNsCKNXLgvneeUJ3rbXgWSgk6paTM",
+  "who": "Kraken (SR), as TronScan names it; not a label in Exchequer's sense",
+  "source_of_address": "TronScan's Super Representative list (apilist.tronscanapi.com/api/pagewitness?witnesstype=0, read keyless 2026-11-16T10:41Z)",
+  "why_chosen": "Stake 1.0 own frozen stake for bandwidth (frozen[]) and for energy (account_resource.frozen_balance_for_energy), stake delegated in (Stake 2.0 bandwidth, Stake 1.0 energy)",
+  "trongrid": {
+   "request": "https://api.trongrid.io/v1/accounts/TBsyKdNsCKNXLgvneeUJ3rbXgWSgk6paTM",
+   "fetched_at": "2026-11-16T10:42:18Z",
+   "key": "none",
+   "sha256_full_answer": "aed39a08c0d2bb4ce8ea3e8bcbe6d5b6a1815859c0ac07bc571f24c6b2e4ffb9",
+   "sha256_note": "of the whole answer as received, re-serialised with sorted keys and no spaces",
+   "trimmed": "only the fields custody_balance reads, the acquired_* (delegated-in) fields it must leave out, allowance, is_witness and latest_opration_time are kept; trc20, assetV2, permissions, votes and usage counters are dropped"
+  },
+  "tronscan": {
+   "page": "https://tronscan.org/#/address/TBsyKdNsCKNXLgvneeUJ3rbXgWSgk6paTM",
+   "as_at_utc": "2026-11-16 10:43",
+   "trx_available": "20.000002",
+   "trx_staked": "20",
+   "trx_total": "40.000002",
+   "rewards_shown_separately": "Claimable Rewards for SR: 4,073.97727 TRX",
+   "read": "account page in a browser, keyless; TronScan's account APIs (api/accountv2, api/account/tokens) answered 401 without a key"
+  }
+ },
+ "trongrid_answer": {
+  "data": [
+   {
+    "address": "4114f2c09d3de3fe82a71960da65d4935a30b24e1f",
+    "balance": 20000002,
+    "frozenV2": [
+     {},
+     {
+      "type": "ENERGY"
+     },
+     {
+      "type": "TRON_POWER"
+     }
+    ],
+    "frozen": [
+     {
+      "frozen_balance": 10000000,
+      "expire_time": 1588360275000
+     }
+    ],
+    "acquired_delegated_frozenV2_balance_for_bandwidth": 1000000,
+    "allowance": 4068026662,
+    "is_witness": true,
+    "latest_opration_time": 1794790206000,
+    "account_resource": {
+     "frozen_balance_for_energy": {
+      "frozen_balance": 10000000,
+      "expire_time": 1588360860000
+     },
+     "acquired_delegated_frozen_balance_for_energy": 40000000
+    }
+   }
+  ],
+  "success": true,
+  "meta": {
+   "at": 1794825739113,
+   "page_size": 1
+  }
+ }
+}

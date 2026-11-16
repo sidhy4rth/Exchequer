@@ -92,6 +92,15 @@ CANONICAL: dict[str, str] = {
     "coinspot": "CoinSpot", "fixedfloat": "FixedFloat", "ueex": "UEEx",
     "flipster": "Flipster", "ourbit": "OURBIT", "maskex": "MaskEX", "onus": "ONUS", "westwallet": "WestWallet",
     "heleket": "Heleket",
+    # Named in FIU-IND's actions against VDA service providers and spelt as the
+    # explorer tags them: PIB release 2173758 (1 Oct 2025: Paxful, CEX.IO, LCX,
+    # Probit Global), PIB release 2308131 (9 Sep 2026: WOO X) and Lok Sabha USQ
+    # 5805 Annexure-II (30 Mar 2026: Moonpay); see data/fiu_ind_status.json.
+    "paxful": "Paxful", "cexio": "CEX.IO", "lcx": "LCX", "probit": "ProBit Global",
+    "woox": "WOO X", "moonpay": "MoonPay",
+    # The same, batch 3: PIB release 2173758 (YouHodler, Changelly) and USQ 5805
+    # Annexure-II (Mercuryo, Beldex).
+    "youhodler": "YouHodler", "changelly": "Changelly", "mercuryo": "Mercuryo", "beldex": "Beldex",
 }
 
 # How many unlabelled wallets one trace will ask about. Each is a request, so
@@ -127,9 +136,14 @@ def clean_tag(text: Any) -> str:
 _HEAD_SPLIT = re.compile(r"[-:_(]| hot| cold| wallet| exchange| deposit|\d", re.IGNORECASE)
 
 
+# Names whose domain is part of the name: "CEX" alone is the common word for a
+# centralised exchange, so only "CEX.IO" (or "CEXIO") names that exchange (#371).
+WHOLE_DOMAIN = {"cex.io": "cexio"}
+
+
 def tag_head(tag: str) -> str:
-    head = _HEAD_SPLIT.split(tag, maxsplit=1)[0]
-    head = re.sub(r"\.(com|io|net)$", "", head.strip().lower())
+    head = _HEAD_SPLIT.split(tag, maxsplit=1)[0].strip().lower()
+    head = WHOLE_DOMAIN.get(head) or re.sub(r"\.(com|io|net)$", "", head)
     return re.sub(r"[^a-z]", "", head)
 
 

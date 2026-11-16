@@ -1,0 +1,56 @@
+{
+ "_meta": {
+  "address": "TLyqzVGLV1srkB7dToTAEqgDSfPtXRJZYH",
+  "who": "Binance Staking (SR), as TronScan names it; not a label in Exchequer's sense",
+  "source_of_address": "TronScan's Super Representative list (apilist.tronscanapi.com/api/pagewitness?witnesstype=0, read keyless 2026-11-16T10:41Z)",
+  "why_chosen": "stake delegated in only, of all four kinds (Stake 1.0 and 2.0, bandwidth and energy); no stake of its own",
+  "trongrid": {
+   "request": "https://api.trongrid.io/v1/accounts/TLyqzVGLV1srkB7dToTAEqgDSfPtXRJZYH",
+   "fetched_at": "2026-11-16T10:42:36Z",
+   "key": "none",
+   "sha256_full_answer": "3cb4553e3d311f05c59a3afb3a2da27dcec73ce7ea319b68485401e581a13a2a",
+   "sha256_note": "of the whole answer as received, re-serialised with sorted keys and no spaces",
+   "trimmed": "only the fields custody_balance reads, the acquired_* (delegated-in) fields it must leave out, allowance, is_witness and latest_opration_time are kept; trc20, assetV2, permissions, votes and usage counters are dropped"
+  },
+  "tronscan": {
+   "page": "https://tronscan.org/#/address/TLyqzVGLV1srkB7dToTAEqgDSfPtXRJZYH",
+   "as_at_utc": "2026-11-16 10:44",
+   "trx_available": "617.559505",
+   "trx_staked": "0",
+   "trx_total": "617.559505",
+   "rewards_shown_separately": "Claimable Rewards for SR: 78,764.962343 TRX",
+   "read": "account page in a browser, keyless; TronScan's account APIs (api/accountv2, api/account/tokens) answered 401 without a key"
+  }
+ },
+ "trongrid_answer": {
+  "data": [
+   {
+    "address": "4178c842ee63b253f8f0d2955bbc582c661a078c9d",
+    "balance": 617559505,
+    "frozenV2": [
+     {},
+     {
+      "type": "ENERGY"
+     },
+     {
+      "type": "TRON_POWER"
+     }
+    ],
+    "acquired_delegated_frozenV2_balance_for_bandwidth": 207000000,
+    "acquired_delegated_frozen_balance_for_bandwidth": 38864000000,
+    "allowance": 78759267997,
+    "is_witness": true,
+    "latest_opration_time": 1793002044000,
+    "account_resource": {
+     "acquired_delegated_frozenV2_balance_for_energy": 7300000000,
+     "acquired_delegated_frozen_balance_for_energy": 7000000
+    }
+   }
+  ],
+  "success": true,
+  "meta": {
+   "at": 1794825756469,
+   "page_size": 1
+  }
+ }
+}

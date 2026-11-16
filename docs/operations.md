@@ -151,6 +151,54 @@ tables by itself, and a signing key is created on the volume. Check
 "docker image builds and runs as non-root" builds and starts the image the
 way Railway does before anything is deployed.
 
+## CI on pull requests
+
+`.github/workflows/test.yml` runs on every pull request and every push to
+main. A newer push to a pull request cancels its older run; runs on main are
+never cancelled. Branch protection on main requires seven of its checks:
+`commit e-mails`, `backend tests`, `migrations on Postgres`, `frontend tests +
+build`, `accessibility (WCAG 2.2 AA)`, `citizen site tests + build` and
+`docker image builds and runs as non-root`.
+
+**The two slowest checks run in shards.** `backend tests` and
+`accessibility (WCAG 2.2 AA)` run as three and four jobs at once (`backend
+shard 1 of 3`, `accessibility shard 1 of 4` and so on), and the job with the required name passes only when every
+shard passed. The backend shards split the test files by size
+(`backend/tests/shards.py`, read by `conftest.py` from
+`EXCHEQUER_TEST_SHARD=k/n`; unset, a local run keeps every test); each file
+lands in exactly one shard. Ruff and the FIU-IND note run in shard 1. The
+accessibility shards are Playwright's own `--shard`, each with its own build
+and backend.
+
+**Docs-only pull requests run less.** The job `what the pull request changes`
+diffs the merge commit under test against main. When every changed file is
+under `docs/` or is a Markdown file at the repository root (`README.md`,
+`DEMO.md`, `JUDGE_QA.md` and so on), these jobs still start and pass, but skip
+their steps:
+
+| Job | On a docs-only pull request |
+|---|---|
+| commit e-mails | runs in full |
+| backend tests | every shard runs in full (tests read `docs/operations.md`, `DEMO.md`, `SECURITY.md` and scan every tracked file for keys) |
+| citizen site tests + build | API tests run (they read `docs/citizen-deploy.md`); page tests and build skipped |
+| frontend tests + build | skipped |
+| accessibility (WCAG 2.2 AA) | each shard skips its steps |
+| docker image builds and runs as non-root | skipped (`docs/` is not in the image) |
+| migrations on Postgres | skipped (the Postgres service still starts) |
+
+Anything else runs everything: code, `backend/data/**`, workflows and
+`.github/scripts`, the Dockerfile, `render.yaml`, package and lock files,
+migrations, and a Markdown file anywhere outside `docs/` and the root. So
+does every push to main, and any run where that job could not decide (it
+fails, finds no merge commit, or meets a file name git had to quote). The
+rule lives in `.github/scripts/docs_only.sh`, tested by
+`backend/tests/test_ci_docs_only.py`.
+
+The skipped jobs are never left out of the run: a required check that does
+not report keeps a pull request waiting for ever, which is why test.yml has no
+`paths` or `paths-ignore` filter. CodeQL is GitHub's default setup, outside
+the workflow files, and still runs on every pull request (it is not required).
+
 ## A public demo
 
 To put the site in front of the public without letting anyone spend the
@@ -269,22 +317,38 @@ schedule back on.
 
 ## Keeping the site awake
 
-`.github/workflows/keep-awake.yml` asks for `/health` every 14 minutes
-(`curl -fsS --max-time 60`, one retry), so Render's free instance never
+`.github/workflows/keep-awake.yml` asks for `/health` every 10 minutes
+(`curl -fsS --max-time 60`, two retries), so Render's free instance never
 reaches 15 idle minutes and a visitor does not wait for the container to
 start. It needs no secret, gets a token with no permissions, and reads the
 address from the repository variable `SITE_URL` (falling back to
-`https://exchequer.co.in`). A run that is still going when the next starts is
-cancelled, so runs do not pile up.
+`https://exchequer.co.in`).
+
+GitHub drops most scheduled runs in this repository (with a 14-minute
+schedule, the first version ran twice in 15 hours on 15-16 Nov 2026), so one
+run does not ask once: it loops. A run is four legs, one after another, each
+asking every 10 minutes for 340 minutes and then resting 5 minutes, about 23
+hours in all. The schedule fires every hour at minute 23 and only has to
+land once in that time. A run that arrives while one is going waits and
+takes over when it ends; a newer arrival replaces a waiting one (it shows as
+cancelled), so only one loop ever runs and two pings are never closer than
+5 minutes. A leg is red only if no ping in it was answered; a single missed
+answer is a warning.
 
 It is off until the owner switches it on:
 
 - **On:** Settings → Secrets and variables → Actions → Variables: the
   repository variable `KEEP_AWAKE` = `on`
   (`gh variable set KEEP_AWAKE --body on`). Actions → Keep awake → Run
-  workflow checks it once by hand; a run started by hand always runs.
+  workflow with "Ask once and stop" ticked checks it once by hand; a run
+  started by hand always runs, and unticked it starts the loop at once.
 - **Off:** set `KEEP_AWAKE` to `off`, or delete the variable. Scheduled runs
-  are then skipped (grey), not failed.
+  are then skipped (grey), not failed. The run already looping goes on for
+  up to 23 hours: cancel it in Actions → Keep awake.
+- **State now:** on. The repository variable `KEEP_AWAKE` was set to
+  `on` at 19:35 UTC on 15 Nov 2026 (01:05 IST on 16 Nov), after #315 merged
+  (`gh variable list` shows it updated at 2026-11-15T19:35:29Z). Change this
+  line whenever the variable changes.
 
 Before switching it on:
 
@@ -294,15 +358,17 @@ Before switching it on:
   the month ends, and Render then suspends them until the next month. The
   owner must confirm in the Render dashboard that this is the only free web
   service in the workspace.
-- **Delays.** GitHub runs scheduled workflows on a best-effort basis: at busy
-  times a run can start several minutes late or be dropped, so the instance
-  can still fall asleep now and then. GitHub also pauses schedules in a
-  repository with no activity for 60 days.
+- **Delays.** GitHub runs scheduled workflows on a best-effort basis. The
+  loop covers late and dropped triggers, but if none lands for a whole run
+  (about 23 hours) the instance can sleep until the next one. GitHub also
+  pauses schedules in a repository with no activity for 60 days.
+- **Runner.** The loop keeps one GitHub-hosted runner busy all the time.
+  Minutes are free for a public repository; it takes one of the account's
+  concurrent job slots, which CI shares.
 - **Not watch checks.** This only keeps the instance up. Watched addresses
   are still checked only by `watch-cron.yml` (Scheduled watch checks), which
-  needs the `WATCH_CRON_TOKEN` secret. Once that job is on, it knocks on the
-  site every 15 minutes itself and keeps it nearly as awake, so the two
-  together cost no more hours than either alone.
+  needs the `WATCH_CRON_TOKEN` secret. Its calls also wake the site, so the
+  two together cost no more hours than either alone.
 
 ## Backups
 

@@ -1,0 +1,1952 @@
+{
+ "_meta": {
+  "description": "Wallets of exchanges FIU-IND acted against (data/fiu_ind_status.json) that had no wallet in the label files, so their FIU-IND note could never appear on a trace. Batch 1: BingX, LBank, XT.com, Phemex and Bitrue. Batch 2: MoonPay, WOO X, Paxful, ProBit Global, LCX and CEX.IO. Batch 3: YouHodler, Changelly, Mercuryo and Beldex. Every row is also in that chain's exchange label file (config.Chain.labels_path) as {exchange, label, type}, which is what the matcher reads; this file records where each came from.",
+  "provenance": "The explorer's own public name tag on the address page (etherscan.io/address/<a>, polygonscan.com/address/<a>), read from the page title without an API key, as data/india_exchanges.json round 1 reads it; source_date is the page's own 'As at' time and retrieved_on the UTC day it was read (15 Nov 2026 UTC, 16 Nov IST). Candidate addresses came from dawsbot/eth-labels @ 14247ba8cf4686b747938248bee34c66089fa9d9 (data/csv/accounts.csv, tags whose head names one of the exchanges of that batch); a candidate became a row only if the explorer page for that chain carries a tag that app/tron_tags.exchange_for_tag reads as that exchange and that is not infrastructure. The label is the tag as the page shows it.",
+  "first_party_sources": "No list of its own wallets from any of the five could be read without a browser on 15 Nov 2026: Phemex's proof-of-reserves page (phemex.com/proof-of-reserves) loads its data in the browser only; BingX's public proof-of-reserves repository (github.com/BingX-API/BingX-proof-of-reserves) holds a Merkle-tree verifier, not addresses; no LBank, XT.com or Bitrue wallet list was found (Bitrue's and XT.com's proof-of-reserves URLs answer 404). No government or court document naming a wallet of any of the five was found. Batch 2 (15 Nov 2026 UTC): no wallet list of its own from MoonPay, WOO X, Paxful, ProBit Global, LCX or CEX.IO was read; none was found that loads without a browser. Batch 3 (15 Nov 2026 UTC): no wallet list of its own from YouHodler, Changelly, Mercuryo or Beldex was read.",
+  "not_done": "No ownership was inferred: no clustering, no guessing, no address from a listing site alone. BscScan and Arbiscan pages sit behind a bot check and were not read, so nothing was added on BNB Smart Chain or Arbitrum; nothing was added on Tron. Per-customer deposit addresses ('X Dep') were not taken.",
+  "activity": "Every row's explorer page showed at least one transaction on that chain. Each address was also read on 15 Nov 2026 (UTC) through keyless public RPCs (ethereum-rpc.publicnode.com, polygon-bor-rpc.publicnode.com): none holds contract code, except XT.com: Hot Wallet (0xefda0cb7...), whose code is an EIP-7702 delegation (0xef0100 + a delegate address), so it is still an account and is typed exchange_wallet. Batch 2, read the same way on 15 Nov 2026 (UTC): none holds contract code, except MoonPay 7 (0x7afc12c8...) and LCX 1 (0xc0c704bf...), whose code is an EIP-7702 delegation, so they are accounts and typed exchange_wallet; Woo X 4 (0xea319fd7...), a Gnosis Safe proxy, was not taken. Batch 3, read the same way on 15 Nov 2026 (UTC): none of the five addresses taken holds contract code on either chain; every BitGo candidate holds contract code on Ethereum and none was taken.",
+  "collisions": "Checked against every list in backend/data (exchange, India set, risk, sanctions, frozen, threat, gambling, router, privacy, mixer, never-flag), the recorded demos and tests, and the label store of release labels-2026-11-16: no address was already labelled; the one a demo names is left out. Batch 2 was checked the same way, and against the laundering-heuristic validation corpus (data/validation/corpus.json): the one a demo names and the one the corpus uses as a control are left out. Batch 3 was checked the same way, including the validation corpus and the label store of release labels-2026-11-16 (labels, exchange_rows, exchange_deposits): none of the five addresses taken was in any of them; of those left out, one BitGo contract (0x03237183...) is a statement counterparty in a recorded demo.",
+  "counts": {
+   "rows": 149,
+   "by_exchange": {
+    "Beldex": 1,
+    "BingX": 62,
+    "Bitrue": 2,
+    "CEX.IO": 1,
+    "Changelly": 1,
+    "LBank": 20,
+    "LCX": 3,
+    "Mercuryo": 2,
+    "MoonPay": 15,
+    "Paxful": 5,
+    "Phemex": 5,
+    "ProBit Global": 4,
+    "WOO X": 9,
+    "XT.com": 16,
+    "YouHodler": 3
+   },
+   "by_chain": {
+    "ethereum": 108,
+    "polygon": 41
+   }
+  },
+  "left_out": [
+   {
+    "chain": "ethereum",
+    "why": "the explorer page for this chain carries the tag but shows no transactions on this chain",
+    "addresses": [
+     "0x0e1e0075e5858d6c836ea724e9cd4bec89858da4",
+     "0x124d9bf2fecbc16b54ec4accdb14d44c2144f012",
+     "0x25b63c988310de90031b84975ae13a6015ca6a16",
+     "0x356dc48d74f107cfbfd61790b0808cda6a0d364f",
+     "0x36c70dc20de1ef22ccfa89c9ab61fd94e551a267",
+     "0x98ae655e5bb418eef21b7c5800d4638aede60e1d",
+     "0x9a87e659cb1904495d489010902b4c8eb6601583",
+     "0xb98486f2df13ba242f173ffcbff5c122b4d95a16",
+     "0xde7d6405e9863eba41cb78eadc54c63f01bc8c2b",
+     "0xe3c1eb0886032aeb8edd4f2e687fc8d4b2972069",
+     "0xea48643446540fe29a909ad4aa6df182c8b7e997",
+     "0xec174c25bba7359b56fd672c8899664121e7dbcf"
+    ]
+   },
+   {
+    "chain": "ethereum",
+    "why": "a recorded demo names it (data/recorded_demos.json, as the sender of a credit in a reported wallet's statement); left out so no demo answer changes",
+    "addresses": [
+     "0x1651d700cd4020334bd185ba4c6e0271ffc0c732"
+    ]
+   },
+   {
+    "chain": "ethereum",
+    "why": "the explorer page for this chain does not carry a tag naming the exchange as a wallet (a 'Deposit Funder' tag, or no tag)",
+    "addresses": [
+     "0x24ca039e1f71ef468d2946045c1f3e90d31fdb71",
+     "0x2710eb8b7f29def9fc856c87aeb64d05d068da3a",
+     "0x29f3144d84da21f9a6788f14680d0a2aa44d6f0e",
+     "0x2bc0dde194d722fe98ed3912cad464380f2225ac",
+     "0x4fd7c9bdb194f3cf0589803d0a664a80e59ebfa6",
+     "0x576318ab7a36a40ebae463a1604396167ec04b35",
+     "0x716198e735e1df5f5423e74fb98d493a1f789c1e",
+     "0x724fd0870996faacf4f6c169f484c678cf2aa209",
+     "0x9c4fe1c3d5975e5c5e493f24352969aa280b7cfc",
+     "0xb48c5ca99d33a8625e125f69ac8e07f3dffe34a0",
+     "0xc7ec1a730f718fb6931d10caebd85742184ee359",
+     "0xdec815281519f6cb080090317e0ba3e446fafe43",
+     "0xf4c62b4f8b7b1b1c4ba88bfd3a8ea392641516e9",
+     "0xfe065653cff3154f44ed30ee876570e49051a6e8"
+    ]
+   },
+   {
+    "chain": "ethereum",
+    "why": "XT.com's statement of 28 Nov 2024, as reported by Odaily (https://www.odaily.news/en/newsflash/403997), names it as the platform wallet assets were moved out of without authorisation; who controls it since is not established (as with the WazirX multisig in data/india_exchanges.json)",
+    "addresses": [
+     "0xdb3ded7731c781224ec292e2163d9554c094fd7c"
+    ]
+   },
+   {
+    "chain": "polygon",
+    "why": "the explorer page for this chain carries the tag but shows no transactions on this chain",
+    "addresses": [
+     "0x07888c3c5d25fa74ae04a9ead1fb1cf0e7743689",
+     "0x58900914802109a1c1010526eaf34399a75f2288",
+     "0xa1ca8b54cb25fb0bd2090061e63e13016a6f2e11",
+     "0xa690621b1d2f8cc06de2de11e4cf69935f82655a",
+     "0xbb936d7cd3cdc6ac01088916d939ca5207cd84c2",
+     "0xea48643446540fe29a909ad4aa6df182c8b7e997"
+    ]
+   },
+   {
+    "chain": "polygon",
+    "why": "a recorded demo names it (data/recorded_demos.json, as the sender of a credit in a reported wallet's statement); left out so no demo answer changes",
+    "addresses": [
+     "0x1651d700cd4020334bd185ba4c6e0271ffc0c732"
+    ]
+   },
+   {
+    "chain": "polygon",
+    "why": "the explorer page for this chain does not carry a tag naming the exchange as a wallet (a 'Deposit Funder' tag, or no tag)",
+    "addresses": [
+     "0x2710eb8b7f29def9fc856c87aeb64d05d068da3a",
+     "0x29f3144d84da21f9a6788f14680d0a2aa44d6f0e",
+     "0x2bc0dde194d722fe98ed3912cad464380f2225ac",
+     "0x6cc8dcbca746a6e4fdefb98e1d0df903b107fd21",
+     "0x9a87e659cb1904495d489010902b4c8eb6601583",
+     "0x9c4fe1c3d5975e5c5e493f24352969aa280b7cfc",
+     "0xb48c5ca99d33a8625e125f69ac8e07f3dffe34a0",
+     "0xdec815281519f6cb080090317e0ba3e446fafe43",
+     "0xe0a616c3659be29567e08819772e6905307adf21"
+    ]
+   },
+   {
+    "chain": "polygon",
+    "why": "the explorer tags it as a deposit funder on Ethereum (see the Ethereum entry), so it is not labelled on any chain",
+    "addresses": [
+     "0x4fd7c9bdb194f3cf0589803d0a664a80e59ebfa6"
+    ]
+   },
+   {
+    "chain": "polygon",
+    "why": "XT.com's statement of 28 Nov 2024, as reported by Odaily (https://www.odaily.news/en/newsflash/403997), names it as the platform wallet assets were moved out of without authorisation; who controls it since is not established (as with the WazirX multisig in data/india_exchanges.json)",
+    "addresses": [
+     "0xdb3ded7731c781224ec292e2163d9554c094fd7c"
+    ]
+   },
+   {
+    "chain": "ethereum",
+    "why": "the explorer page carries a tag that app/tron_tags.exchange_for_tag does not read as one of the exchange's wallets: a role it does not recognise ('Withdrawals', 'Company Reserve', 'Team') or infrastructure ('Staking Cold', 'Treasury', 'Deployer')",
+    "addresses": [
+     "0x0d83f81bc9f1e8252f87a4109bbf0d90171c81df",
+     "0x15271e572267def474366bb683719cc59489efbe",
+     "0x8216874887415e2650d12d53ff53516f04a74fd7",
+     "0xc90970dd648415756681163f69eaeb7eb9c28a9c",
+     "0xe2933566f172d08f8c90144fed5ae28e9d54b1ec",
+     "0xe64eb20471491956338eedc0f98242bc3ad0c91b"
+    ]
+   },
+   {
+    "chain": "ethereum",
+    "why": "the laundering-heuristic validation corpus (data/validation/corpus.json) uses it as a control wallet; left out so what data/validation/results.json records does not change",
+    "addresses": [
+     "0x2957ea6d4f06bc2badfb2958c65fc7d1be5461b1"
+    ]
+   },
+   {
+    "chain": "ethereum",
+    "why": "the LCX wallet drained in the 8 Jan 2022 LCX hack: on that day it sent 8 token transfers (USDC, LINK, SAND, LCX, QNT, ENJ, EURe, MKR; e.g. tx 0xfcd91aa13514fb8b30f1192e5a3da4d40867a09e8a81d1647676d06ee5ae8f83) to 0x165402279f2c081c54b00f0e08812f3fd4560a05, which data/threat_labels.json labels 'LCX Hacker' (read keylessly from https://eth.blockscout.com/api/v2/addresses/0x165402279f2c081c54b00f0e08812f3fd4560a05/token-transfers?filter=to on 15 Nov 2026 UTC); who controls it since is not established (as with the WazirX multisig in data/india_exchanges.json)",
+    "addresses": [
+     "0x4631018f63d5e31680fb53c11c9e1b11f1503e6f"
+    ]
+   },
+   {
+    "chain": "ethereum",
+    "why": "a recorded demo names it (data/recorded_demos.json, as the sender of a credit in a reported wallet's statement); left out so no demo answer changes",
+    "addresses": [
+     "0xc9f5296eb3ac266c94568d790b6e91eba7d76a11"
+    ]
+   },
+   {
+    "chain": "ethereum",
+    "why": "the explorer page for this chain carries the tag but shows no transactions on this chain",
+    "addresses": [
+     "0xdba24f19bce0f32ea4273faea7c01d7f9d4f91d6"
+    ]
+   },
+   {
+    "chain": "ethereum",
+    "why": "the address holds contract code (a Gnosis Safe proxy; eth_getCode from ethereum-rpc.publicnode.com, 15 Nov 2026 UTC), so it is a contract the exchange runs, not where customers cash out (scripts/_tag_words.py); not taken",
+    "addresses": [
+     "0xea319fd75766f5180018f8e760f51c3d3c457496"
+    ]
+   },
+   {
+    "chain": "polygon",
+    "why": "the explorer page for this chain carries the tag but shows no transactions on this chain",
+    "addresses": [
+     "0x03dd167d62e1dfc223ffd7b37fc8bf45fb973478",
+     "0x1e6dce7ce381774286abb8c9aac461bb7b1c4b05",
+     "0x1f973b233f5ebb1e5d7cfe51b9ae4a32415a3a08",
+     "0x594203e46e0b41b1edb54a551e7784c194d1335b",
+     "0x607e062e3986a16283047beaed1a7dc3e220ff0e",
+     "0x72e5263ff33d2494692d7f94a758aa9f82062f73",
+     "0x7a20527ba5a749b3b054a821950bfcc2c01b959f",
+     "0xad285fdedfc0d5f944a33e478356524293c7ec68",
+     "0xb287eac48ab21c5fb1d3723830d60b4c797555b0",
+     "0xc0c704bfc375b3fc657bc378b1cfee009194e2b3",
+     "0xea319fd75766f5180018f8e760f51c3d3c457496",
+     "0xeef97691d3307b4e61522170f648ee2df1312fee",
+     "0xf71afe21cd32959113fc47ae2ef886b43a9413d5"
+    ]
+   },
+   {
+    "chain": "polygon",
+    "why": "the explorer page carries a tag that app/tron_tags.exchange_for_tag does not read as one of the exchange's wallets: a role it does not recognise ('Withdrawals', 'Company Reserve', 'Team') or infrastructure ('Staking Cold', 'Treasury', 'Deployer')",
+    "addresses": [
+     "0x0d83f81bc9f1e8252f87a4109bbf0d90171c81df",
+     "0x15271e572267def474366bb683719cc59489efbe",
+     "0x8216874887415e2650d12d53ff53516f04a74fd7",
+     "0xc90970dd648415756681163f69eaeb7eb9c28a9c",
+     "0xe2933566f172d08f8c90144fed5ae28e9d54b1ec",
+     "0xe64eb20471491956338eedc0f98242bc3ad0c91b"
+    ]
+   },
+   {
+    "chain": "polygon",
+    "why": "the validation corpus uses it as an Ethereum control wallet (see the Ethereum entry), so it is not labelled on any chain",
+    "addresses": [
+     "0x2957ea6d4f06bc2badfb2958c65fc7d1be5461b1"
+    ]
+   },
+   {
+    "chain": "polygon",
+    "why": "the LCX wallet drained in the 8 Jan 2022 LCX hack (see the Ethereum entry), so it is not labelled on any chain",
+    "addresses": [
+     "0x4631018f63d5e31680fb53c11c9e1b11f1503e6f"
+    ]
+   },
+   {
+    "chain": "polygon",
+    "why": "a recorded demo names it (data/recorded_demos.json, as the sender of a credit in a reported wallet's statement); left out so no demo answer changes",
+    "addresses": [
+     "0xc9f5296eb3ac266c94568d790b6e91eba7d76a11"
+    ]
+   },
+   {
+    "chain": "ethereum",
+    "why": "BitGo (USQ 5805 Annexure-II, row 16): every candidate holds contract code (eth_getCode from ethereum-rpc.publicnode.com, 15 Nov 2026 UTC). Nine are tagged as BitGo infrastructure ('MultiSig 2' to 'MultiSig 8', 'Batcher 1', 'WalletSimple Multisig Wallet'); 'BitGo 1' holds the same 3,575-byte code as the MultiSig tags. BitGo's multisig wallet contracts hold funds for the firms that use them, so none is taken and BitGo is not added to app/tron_tags.CANONICAL",
+    "addresses": [
+     "0x0323718324218dcbff7c9f89ba5a5954f61a6c74",
+     "0x0c9b25dfe02b2c89cce86e1a0bd6c04a7aca01b6",
+     "0x294c6f1ec18494abe9f608ecd97a307c80586775",
+     "0x3a5cc8689d1b0cef2c317bc5c0ad6ce88b27d597",
+     "0x6fb3934ee371f5ea06c5f6a71cf7c7c6688fbd8d",
+     "0x758982386d532d977b462f5b80e16928ea6652dc",
+     "0x95eeadde20306a602cba20ae8b4f29a95c5d6405",
+     "0x99126daf078c693d200155e2dd7a668479120745",
+     "0xa5d29237a8f14ff25ab9683c38e64671e3bb5cc8",
+     "0xbd02c51150a4ab6ce97b9de2025644594f3e75b8"
+    ]
+   },
+   {
+    "chain": "polygon",
+    "why": "BitGo (see the Ethereum entry): these PolygonScan pages show no transactions, except 0xbd02c511..., whose page carries no tag and which holds contract code on Polygon; none is taken",
+    "addresses": [
+     "0x0323718324218dcbff7c9f89ba5a5954f61a6c74",
+     "0x0c9b25dfe02b2c89cce86e1a0bd6c04a7aca01b6",
+     "0x294c6f1ec18494abe9f608ecd97a307c80586775",
+     "0x3a5cc8689d1b0cef2c317bc5c0ad6ce88b27d597",
+     "0x6fb3934ee371f5ea06c5f6a71cf7c7c6688fbd8d",
+     "0x758982386d532d977b462f5b80e16928ea6652dc",
+     "0x95eeadde20306a602cba20ae8b4f29a95c5d6405",
+     "0x99126daf078c693d200155e2dd7a668479120745",
+     "0xa5d29237a8f14ff25ab9683c38e64671e3bb5cc8",
+     "0xbd02c51150a4ab6ce97b9de2025644594f3e75b8"
+    ]
+   },
+   {
+    "chain": "polygon",
+    "why": "the explorer page for this chain carries the tag but shows no transactions on this chain",
+    "addresses": [
+     "0x258b7b9a1ba92f47f5f4f5e733293477620a82cb",
+     "0x260ee8f2b0c167e0cd6119b2df923fd061dc1093",
+     "0x96fc4553a00c117c5b0bed950dd625d1c16dc894"
+    ]
+   }
+  ],
+  "batches": {
+   "1": {
+    "exchanges": [
+     "BingX",
+     "LBank",
+     "XT.com",
+     "Phemex",
+     "Bitrue"
+    ],
+    "issue": 342
+   },
+   "2": {
+    "exchanges": [
+     "MoonPay",
+     "WOO X",
+     "Paxful",
+     "ProBit Global",
+     "LCX",
+     "CEX.IO"
+    ],
+    "issue": 354
+   },
+   "3": {
+    "exchanges": [
+     "YouHodler",
+     "Changelly",
+     "Mercuryo",
+     "Beldex"
+    ],
+    "issue": 358,
+    "examined_none_taken": [
+     "BitGo"
+    ]
+   }
+  }
+ },
+ "rows": [
+  {
+   "address": "0x258b7b9a1ba92f47f5f4f5e733293477620a82cb",
+   "chain": "ethereum",
+   "exchange": "Beldex",
+   "label": "Beldex",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x258b7b9a1ba92f47f5f4f5e733293477620a82cb",
+   "source_date": "Nov-15-2026 09:35:26 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x065ac3d33fec104fba9f2f4d674afaa7c4ebcf43",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 27",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x065ac3d33fec104fba9f2f4d674afaa7c4ebcf43",
+   "source_date": "Nov-15-2026 08:44:08 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x2b3bf74b29f59fb8dda41cf3d6a8da28cf8e7921",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 29",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x2b3bf74b29f59fb8dda41cf3d6a8da28cf8e7921",
+   "source_date": "Nov-15-2026 08:44:51 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x2b9287402e077f866a067176217ee6ec0e24e4cc",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 47",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x2b9287402e077f866a067176217ee6ec0e24e4cc",
+   "source_date": "Nov-15-2026 08:44:54 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x2eecc9026534fd430ac83c5007b068476fc5dc1f",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 44",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x2eecc9026534fd430ac83c5007b068476fc5dc1f",
+   "source_date": "Nov-15-2026 08:45:00 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x406c22b8740ae955b04fd11c2061e053807e2a69",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 9",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x406c22b8740ae955b04fd11c2061e053807e2a69",
+   "source_date": "Nov-15-2026 08:45:15 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x434742703055bd20f42142d9d70b0735a5eb1b14",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 48",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x434742703055bd20f42142d9d70b0735a5eb1b14",
+   "source_date": "Nov-15-2026 08:45:18 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x4597a8206978c5de22173432b2f0cb899eef9fa3",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 10",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x4597a8206978c5de22173432b2f0cb899eef9fa3",
+   "source_date": "Nov-15-2026 08:45:23 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x474ac5cb62d7acedc9990d4daafa0c39d9478fbb",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 7",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x474ac5cb62d7acedc9990d4daafa0c39d9478fbb",
+   "source_date": "Nov-15-2026 08:45:26 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x47dd7b40346037d7ca47d45e40c66a2f351edb20",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 43",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x47dd7b40346037d7ca47d45e40c66a2f351edb20",
+   "source_date": "Nov-15-2026 08:45:29 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x5286530c8a31dec3f523200832d10378239bea66",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 37",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x5286530c8a31dec3f523200832d10378239bea66",
+   "source_date": "Nov-15-2026 08:45:40 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x58900914802109a1c1010526eaf34399a75f2288",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 17",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x58900914802109a1c1010526eaf34399a75f2288",
+   "source_date": "Nov-15-2026 08:45:45 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x62a6557a60ee2920b55ca5f11b707844ffb61b11",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 38",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x62a6557a60ee2920b55ca5f11b707844ffb61b11",
+   "source_date": "Nov-15-2026 08:45:51 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x62d96cf5bea5970689c651fc103bb5b80c5bcec1",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 49",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x62d96cf5bea5970689c651fc103bb5b80c5bcec1",
+   "source_date": "Nov-15-2026 08:45:54 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x66486b5534abf6403fef2b4d8aefa5425de28cf3",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 52",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x66486b5534abf6403fef2b4d8aefa5425de28cf3",
+   "source_date": "Nov-15-2026 08:45:57 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x6bb65f31ee5567cc9a92ddd29b6d076cd674d4c6",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 30",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x6bb65f31ee5567cc9a92ddd29b6d076cd674d4c6",
+   "source_date": "Nov-15-2026 08:46:00 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x6c69fa64ec451b1bc5b5fbaa56cf648a281634be",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 15",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x6c69fa64ec451b1bc5b5fbaa56cf648a281634be",
+   "source_date": "Nov-15-2026 08:46:03 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x72348778639788e0226f9e91aeb83a07b496665d",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 36",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x72348778639788e0226f9e91aeb83a07b496665d",
+   "source_date": "Nov-15-2026 08:46:11 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x74b0e133bee3384dfcfa60b31d85d8e2062de811",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 40",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x74b0e133bee3384dfcfa60b31d85d8e2062de811",
+   "source_date": "Nov-15-2026 08:46:21 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x766182bfa8b8790d61c4d7e7912c1c3a6f42cef6",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 3",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x766182bfa8b8790d61c4d7e7912c1c3a6f42cef6",
+   "source_date": "Nov-15-2026 08:46:24 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x78751991f163081b432b3e84a9f1e9ec96c9c701",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 32",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x78751991f163081b432b3e84a9f1e9ec96c9c701",
+   "source_date": "Nov-15-2026 08:46:28 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x7b0d89a97c6749f30c0f527281700f170007947b",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 54",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x7b0d89a97c6749f30c0f527281700f170007947b",
+   "source_date": "Nov-15-2026 08:46:30 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x7c217eb128337c4b44ca9093ea9a9984b1803488",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 24",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x7c217eb128337c4b44ca9093ea9a9984b1803488",
+   "source_date": "Nov-15-2026 08:46:33 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x9bd8135e586161753bee9c3be2b6cdd25ebeb346",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 33",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x9bd8135e586161753bee9c3be2b6cdd25ebeb346",
+   "source_date": "Nov-15-2026 08:46:53 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xa0fca8fa8e9c6aa77305f94be0e03908d0a42900",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 5",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xa0fca8fa8e9c6aa77305f94be0e03908d0a42900",
+   "source_date": "Nov-15-2026 08:47:00 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xa1ca8b54cb25fb0bd2090061e63e13016a6f2e11",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 6",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xa1ca8b54cb25fb0bd2090061e63e13016a6f2e11",
+   "source_date": "Nov-15-2026 08:47:06 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xa4512426342fb6bbb48d6c6a1a35efde929e7773",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 51",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xa4512426342fb6bbb48d6c6a1a35efde929e7773",
+   "source_date": "Nov-15-2026 08:47:08 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xa60efe89e07cfcf83eb30f3b063834f0f8b30466",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 42",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xa60efe89e07cfcf83eb30f3b063834f0f8b30466",
+   "source_date": "Nov-15-2026 08:47:12 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xa88f86e5685fca7c5d6de0e4d944875b007137b5",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 8",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xa88f86e5685fca7c5d6de0e4d944875b007137b5",
+   "source_date": "Nov-15-2026 08:47:18 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xaf1e33f8153f25e304dec5cb544b5b6ccc5520ed",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 23",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xaf1e33f8153f25e304dec5cb544b5b6ccc5520ed",
+   "source_date": "Nov-15-2026 08:47:23 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xb994d148aa9a45f4182bce93f53e9e07949b55e6",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 45",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xb994d148aa9a45f4182bce93f53e9e07949b55e6",
+   "source_date": "Nov-15-2026 08:47:38 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xbb936d7cd3cdc6ac01088916d939ca5207cd84c2",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 12",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xbb936d7cd3cdc6ac01088916d939ca5207cd84c2",
+   "source_date": "Nov-15-2026 08:47:42 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xbcea70b89fb6eabace33b8ba7a7f719e8782981c",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 53",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xbcea70b89fb6eabace33b8ba7a7f719e8782981c",
+   "source_date": "Nov-15-2026 08:47:44 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xc3dcd744db3f114f0edf03682b807b78a227bf74",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 20",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xc3dcd744db3f114f0edf03682b807b78a227bf74",
+   "source_date": "Nov-15-2026 08:47:51 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xc4334a9af50c80a12c484de643149f6159bdd110",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 4",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xc4334a9af50c80a12c484de643149f6159bdd110",
+   "source_date": "Nov-15-2026 08:47:54 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xc62559777bf2f5aeef9ad924519a463ede374d09",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 50",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xc62559777bf2f5aeef9ad924519a463ede374d09",
+   "source_date": "Nov-15-2026 08:47:58 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xc65d821383c20421cc89f622478c39a9e3d1e0c6",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 34",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xc65d821383c20421cc89f622478c39a9e3d1e0c6",
+   "source_date": "Nov-15-2026 08:48:01 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xcb95ca610c91629c835b129355999b7acdc4cc06",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 28",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xcb95ca610c91629c835b129355999b7acdc4cc06",
+   "source_date": "Nov-15-2026 08:48:10 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xd38cf87f114f2a0582c329fb9df4f7044ce71330",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 26",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xd38cf87f114f2a0582c329fb9df4f7044ce71330",
+   "source_date": "Nov-15-2026 08:48:16 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xda43c54ce5083885f561e05fd6220b7096be246c",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 2",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xda43c54ce5083885f561e05fd6220b7096be246c",
+   "source_date": "Nov-15-2026 08:48:19 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xe18bb692ae7d58982c62621a3d13743d23de852f",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 35",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xe18bb692ae7d58982c62621a3d13743d23de852f",
+   "source_date": "Nov-15-2026 08:48:41 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xe4516477adacc6682cf18069475f676a5b5667f9",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 14",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xe4516477adacc6682cf18069475f676a5b5667f9",
+   "source_date": "Nov-15-2026 08:48:46 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xed5e461999b1fedd00797a818edd75c727ed948f",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 13",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xed5e461999b1fedd00797a818edd75c727ed948f",
+   "source_date": "Nov-15-2026 08:49:05 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xef317e433b0836f294866d43f67d6871b609b351",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 39",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xef317e433b0836f294866d43f67d6871b609b351",
+   "source_date": "Nov-15-2026 08:49:08 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xefa02443139f31e0336608e5a2f99d26784e4bfd",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 11",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xefa02443139f31e0336608e5a2f99d26784e4bfd",
+   "source_date": "Nov-15-2026 08:49:10 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xf28f8f8dd8cf0b5eeed05c51167de5390418efdd",
+   "chain": "ethereum",
+   "exchange": "BingX",
+   "label": "BingX 31",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xf28f8f8dd8cf0b5eeed05c51167de5390418efdd",
+   "source_date": "Nov-15-2026 08:49:20 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x6cc8dcbca746a6e4fdefb98e1d0df903b107fd21",
+   "chain": "ethereum",
+   "exchange": "Bitrue",
+   "label": "Bitrue",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x6cc8dcbca746a6e4fdefb98e1d0df903b107fd21",
+   "source_date": "Nov-15-2026 08:46:06 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xd205a958527f083f1b222061b4d60d147fec5044",
+   "chain": "ethereum",
+   "exchange": "Bitrue",
+   "label": "Bitrue 2",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xd205a958527f083f1b222061b4d60d147fec5044",
+   "source_date": "Nov-15-2026 08:48:13 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x1f973b233f5ebb1e5d7cfe51b9ae4a32415a3a08",
+   "chain": "ethereum",
+   "exchange": "CEX.IO",
+   "label": "CEX.IO 2",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x1f973b233f5ebb1e5d7cfe51b9ae4a32415a3a08",
+   "source_date": "Nov-15-2026 09:18:21 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x96fc4553a00c117c5b0bed950dd625d1c16dc894",
+   "chain": "ethereum",
+   "exchange": "Changelly",
+   "label": "Changelly",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x96fc4553a00c117c5b0bed950dd625d1c16dc894",
+   "source_date": "Nov-15-2026 09:35:52 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x0e80abb31ace45ae26f9a2943acaab72e77de9be",
+   "chain": "ethereum",
+   "exchange": "LBank",
+   "label": "LBank 5",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x0e80abb31ace45ae26f9a2943acaab72e77de9be",
+   "source_date": "Nov-15-2026 08:44:17 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x11b1e83818028a8f44ef84613d5c058734b2d5cf",
+   "chain": "ethereum",
+   "exchange": "LBank",
+   "label": "LBank 3",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x11b1e83818028a8f44ef84613d5c058734b2d5cf",
+   "source_date": "Nov-15-2026 08:44:23 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x120051a72966950b8ce12eb5496b5d1eeec1541b",
+   "chain": "ethereum",
+   "exchange": "LBank",
+   "label": "LBank: Hot Wallet 3",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x120051a72966950b8ce12eb5496b5d1eeec1541b",
+   "source_date": "Nov-15-2026 08:44:26 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x22f83e4b9cb95cb99b88e8f4f15ea598c74c2788",
+   "chain": "ethereum",
+   "exchange": "LBank",
+   "label": "LBank 1",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x22f83e4b9cb95cb99b88e8f4f15ea598c74c2788",
+   "source_date": "Nov-15-2026 08:44:35 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x43cbdc908a0860ae23fa06aa5b20dfee43c196a6",
+   "chain": "ethereum",
+   "exchange": "LBank",
+   "label": "LBank 2",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x43cbdc908a0860ae23fa06aa5b20dfee43c196a6",
+   "source_date": "Nov-15-2026 08:45:20 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x4ef08512caf43cba05fda863da662942b258b237",
+   "chain": "ethereum",
+   "exchange": "LBank",
+   "label": "LBank 20",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x4ef08512caf43cba05fda863da662942b258b237",
+   "source_date": "Nov-15-2026 08:45:31 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x74922ba81e614520f5321d9229852f7d65541bc3",
+   "chain": "ethereum",
+   "exchange": "LBank",
+   "label": "LBank 21",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x74922ba81e614520f5321d9229852f7d65541bc3",
+   "source_date": "Nov-15-2026 08:46:18 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x7ff77c761e5669d1696059a3b46cda0ae293aae3",
+   "chain": "ethereum",
+   "exchange": "LBank",
+   "label": "LBank 4",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x7ff77c761e5669d1696059a3b46cda0ae293aae3",
+   "source_date": "Nov-15-2026 08:46:36 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xa1b8a51aa3e5c4c98988b45eeabfc0baed08e660",
+   "chain": "ethereum",
+   "exchange": "LBank",
+   "label": "LBank 18",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xa1b8a51aa3e5c4c98988b45eeabfc0baed08e660",
+   "source_date": "Nov-15-2026 08:47:03 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xa690621b1d2f8cc06de2de11e4cf69935f82655a",
+   "chain": "ethereum",
+   "exchange": "LBank",
+   "label": "LBank: Hot Wallet 6",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xa690621b1d2f8cc06de2de11e4cf69935f82655a",
+   "source_date": "Nov-15-2026 08:47:16 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xb0e5ec2a0bb8b8f3a727787f90b959611e4062b7",
+   "chain": "ethereum",
+   "exchange": "LBank",
+   "label": "LBank: Hot Wallet 9",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xb0e5ec2a0bb8b8f3a727787f90b959611e4062b7",
+   "source_date": "Nov-15-2026 08:47:30 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xc06e0513a150a021104fdcdd20ce362fa593ba1f",
+   "chain": "ethereum",
+   "exchange": "LBank",
+   "label": "LBank: Hot Wallet 2",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xc06e0513a150a021104fdcdd20ce362fa593ba1f",
+   "source_date": "Nov-15-2026 08:47:47 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xe0f0aa98b4a4d305ac4a04d830c96a158bda9cd8",
+   "chain": "ethereum",
+   "exchange": "LBank",
+   "label": "LBank: Hot Wallet 8",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xe0f0aa98b4a4d305ac4a04d830c96a158bda9cd8",
+   "source_date": "Nov-15-2026 08:48:37 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xe5a8b35eaa3c14e0a6514f800825e1e6687bf23e",
+   "chain": "ethereum",
+   "exchange": "LBank",
+   "label": "LBank: Hot Wallet 4",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xe5a8b35eaa3c14e0a6514f800825e1e6687bf23e",
+   "source_date": "Nov-15-2026 08:48:49 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xfa9f7a1cbfbcb688729c522b4f0905ccf4d26d25",
+   "chain": "ethereum",
+   "exchange": "LBank",
+   "label": "LBank: Hot Wallet 7",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xfa9f7a1cbfbcb688729c522b4f0905ccf4d26d25",
+   "source_date": "Nov-15-2026 08:49:29 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xbc4e4069b1cb2fc1256a2bf454ae3affb4e05a4d",
+   "chain": "ethereum",
+   "exchange": "LCX",
+   "label": "LCX Exchange",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xbc4e4069b1cb2fc1256a2bf454ae3affb4e05a4d",
+   "source_date": "Nov-15-2026 09:19:16 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xc0c704bfc375b3fc657bc378b1cfee009194e2b3",
+   "chain": "ethereum",
+   "exchange": "LCX",
+   "label": "LCX 1",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xc0c704bfc375b3fc657bc378b1cfee009194e2b3",
+   "source_date": "Nov-15-2026 09:19:20 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x8c8d7c46219d9205f056f28fee5950ad564d7465",
+   "chain": "ethereum",
+   "exchange": "Mercuryo",
+   "label": "mercuryo",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x8c8d7c46219d9205f056f28fee5950ad564d7465",
+   "source_date": "Nov-15-2026 09:35:46 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x0b5c4a7fcda49e0a8661419bb55b86161a86db2a",
+   "chain": "ethereum",
+   "exchange": "MoonPay",
+   "label": "MoonPay 5",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x0b5c4a7fcda49e0a8661419bb55b86161a86db2a",
+   "source_date": "Nov-15-2026 09:18:00 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x1440ec793ae50fa046b95bfeca5af475b6003f9e",
+   "chain": "ethereum",
+   "exchange": "MoonPay",
+   "label": "MoonPay 2",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x1440ec793ae50fa046b95bfeca5af475b6003f9e",
+   "source_date": "Nov-15-2026 09:18:06 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x151b381058f91cf871e7ea1ee83c45326f61e96d",
+   "chain": "ethereum",
+   "exchange": "MoonPay",
+   "label": "MoonPay 4",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x151b381058f91cf871e7ea1ee83c45326f61e96d",
+   "source_date": "Nov-15-2026 09:18:09 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x22f6cc8738308a8c92a6a71ea67832463d1fec0d",
+   "chain": "ethereum",
+   "exchange": "MoonPay",
+   "label": "MoonPay 8",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x22f6cc8738308a8c92a6a71ea67832463d1fec0d",
+   "source_date": "Nov-15-2026 09:18:23 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x7afc12c8dd2e6591581d95586eb2c2a4905a12a9",
+   "chain": "ethereum",
+   "exchange": "MoonPay",
+   "label": "MoonPay 7",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x7afc12c8dd2e6591581d95586eb2c2a4905a12a9",
+   "source_date": "Nov-15-2026 09:19:00 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xb287eac48ab21c5fb1d3723830d60b4c797555b0",
+   "chain": "ethereum",
+   "exchange": "MoonPay",
+   "label": "MoonPay 9",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xb287eac48ab21c5fb1d3723830d60b4c797555b0",
+   "source_date": "Nov-15-2026 09:19:14 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xd108fd0e8c8e71552a167e7a44ff1d345d233ba6",
+   "chain": "ethereum",
+   "exchange": "MoonPay",
+   "label": "MoonPay 3",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xd108fd0e8c8e71552a167e7a44ff1d345d233ba6",
+   "source_date": "Nov-15-2026 09:19:28 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xd42f958e1c3e2a10e5d66343c4c9a57726e5b4b6",
+   "chain": "ethereum",
+   "exchange": "MoonPay",
+   "label": "MoonPay 6",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xd42f958e1c3e2a10e5d66343c4c9a57726e5b4b6",
+   "source_date": "Nov-15-2026 09:19:31 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x17f1a51da68d27c94d2a51d92b27b5bd4718b986",
+   "chain": "ethereum",
+   "exchange": "Paxful",
+   "label": "Paxful 1",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x17f1a51da68d27c94d2a51d92b27b5bd4718b986",
+   "source_date": "Nov-15-2026 09:18:15 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x777d4627e31863b2a49e2985af46525f21a9846c",
+   "chain": "ethereum",
+   "exchange": "Paxful",
+   "label": "Paxful 3",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x777d4627e31863b2a49e2985af46525f21a9846c",
+   "source_date": "Nov-15-2026 09:18:51 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x7a20527ba5a749b3b054a821950bfcc2c01b959f",
+   "chain": "ethereum",
+   "exchange": "Paxful",
+   "label": "Paxful 2",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x7a20527ba5a749b3b054a821950bfcc2c01b959f",
+   "source_date": "Nov-15-2026 09:18:54 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x35d2d03607b9155b42cf673102fe58251ac4f644",
+   "chain": "ethereum",
+   "exchange": "Phemex",
+   "label": "Phemex 3",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x35d2d03607b9155b42cf673102fe58251ac4f644",
+   "source_date": "Nov-15-2026 08:45:07 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x50be13b54f3eebbe415d20250598d81280e56772",
+   "chain": "ethereum",
+   "exchange": "Phemex",
+   "label": "Phemex",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x50be13b54f3eebbe415d20250598d81280e56772",
+   "source_date": "Nov-15-2026 08:45:37 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xf7d13c7dbec85ff86ee815f6dcbb3dedac78ca49",
+   "chain": "ethereum",
+   "exchange": "Phemex",
+   "label": "Phemex 2",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xf7d13c7dbec85ff86ee815f6dcbb3dedac78ca49",
+   "source_date": "Nov-15-2026 08:49:26 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x72e5263ff33d2494692d7f94a758aa9f82062f73",
+   "chain": "ethereum",
+   "exchange": "ProBit Global",
+   "label": "ProBit 1",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x72e5263ff33d2494692d7f94a758aa9f82062f73",
+   "source_date": "Nov-15-2026 09:18:49 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xad285fdedfc0d5f944a33e478356524293c7ec68",
+   "chain": "ethereum",
+   "exchange": "ProBit Global",
+   "label": "ProBit 3",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xad285fdedfc0d5f944a33e478356524293c7ec68",
+   "source_date": "Nov-15-2026 09:19:11 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xf71afe21cd32959113fc47ae2ef886b43a9413d5",
+   "chain": "ethereum",
+   "exchange": "ProBit Global",
+   "label": "ProBit 2",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xf71afe21cd32959113fc47ae2ef886b43a9413d5",
+   "source_date": "Nov-15-2026 09:19:51 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x03dd167d62e1dfc223ffd7b37fc8bf45fb973478",
+   "chain": "ethereum",
+   "exchange": "WOO X",
+   "label": "Woo X 1",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x03dd167d62e1dfc223ffd7b37fc8bf45fb973478",
+   "source_date": "Nov-15-2026 09:17:56 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x1e6dce7ce381774286abb8c9aac461bb7b1c4b05",
+   "chain": "ethereum",
+   "exchange": "WOO X",
+   "label": "Woo X 5",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x1e6dce7ce381774286abb8c9aac461bb7b1c4b05",
+   "source_date": "Nov-15-2026 09:18:18 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x594203e46e0b41b1edb54a551e7784c194d1335b",
+   "chain": "ethereum",
+   "exchange": "WOO X",
+   "label": "Woo X 7",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x594203e46e0b41b1edb54a551e7784c194d1335b",
+   "source_date": "Nov-15-2026 09:18:39 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x607e062e3986a16283047beaed1a7dc3e220ff0e",
+   "chain": "ethereum",
+   "exchange": "WOO X",
+   "label": "Woo X 8",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x607e062e3986a16283047beaed1a7dc3e220ff0e",
+   "source_date": "Nov-15-2026 09:18:42 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x63dfe4e34a3bfc00eb0220786238a7c6cef8ffc4",
+   "chain": "ethereum",
+   "exchange": "WOO X",
+   "label": "Woo X 2",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x63dfe4e34a3bfc00eb0220786238a7c6cef8ffc4",
+   "source_date": "Nov-15-2026 09:18:45 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xe505bf08c03cc0fa4e0fdfa2487e2c11085b3fd9",
+   "chain": "ethereum",
+   "exchange": "WOO X",
+   "label": "Woo X 3",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xe505bf08c03cc0fa4e0fdfa2487e2c11085b3fd9",
+   "source_date": "Nov-15-2026 09:19:39 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xeef97691d3307b4e61522170f648ee2df1312fee",
+   "chain": "ethereum",
+   "exchange": "WOO X",
+   "label": "Woo X 6",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xeef97691d3307b4e61522170f648ee2df1312fee",
+   "source_date": "Nov-15-2026 09:19:48 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x07888c3c5d25fa74ae04a9ead1fb1cf0e7743689",
+   "chain": "ethereum",
+   "exchange": "XT.com",
+   "label": "XT.com 4",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x07888c3c5d25fa74ae04a9ead1fb1cf0e7743689",
+   "source_date": "Nov-15-2026 08:44:11 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x104703893f56243c0e56441a99eb3f32e1ed6ad2",
+   "chain": "ethereum",
+   "exchange": "XT.com",
+   "label": "XT.com 3",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x104703893f56243c0e56441a99eb3f32e1ed6ad2",
+   "source_date": "Nov-15-2026 08:44:21 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x3fcad6c6fb6bffbb3585f2a401fbc87a6719d28d",
+   "chain": "ethereum",
+   "exchange": "XT.com",
+   "label": "XT.com 12",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x3fcad6c6fb6bffbb3585f2a401fbc87a6719d28d",
+   "source_date": "Nov-15-2026 08:45:12 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x61459d345779b9d8ceaf2b1472a60805cb699aae",
+   "chain": "ethereum",
+   "exchange": "XT.com",
+   "label": "XT.com 18",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x61459d345779b9d8ceaf2b1472a60805cb699aae",
+   "source_date": "Nov-15-2026 08:45:48 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x80309282231e9e01c74c4e0efed35b063e6c5d27",
+   "chain": "ethereum",
+   "exchange": "XT.com",
+   "label": "XT.com 9",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x80309282231e9e01c74c4e0efed35b063e6c5d27",
+   "source_date": "Nov-15-2026 08:46:39 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x8c395e3fb26939438acd5ca4be7684752829e269",
+   "chain": "ethereum",
+   "exchange": "XT.com",
+   "label": "XT.com 10",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x8c395e3fb26939438acd5ca4be7684752829e269",
+   "source_date": "Nov-15-2026 08:46:42 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x98a79dbf216daef423bab001e23795f606bf7c2e",
+   "chain": "ethereum",
+   "exchange": "XT.com",
+   "label": "XT.com 19",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x98a79dbf216daef423bab001e23795f606bf7c2e",
+   "source_date": "Nov-15-2026 08:46:44 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xb082e500faecb492e87f0176b38c2626a185ddd7",
+   "chain": "ethereum",
+   "exchange": "XT.com",
+   "label": "XT.com 13",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xb082e500faecb492e87f0176b38c2626a185ddd7",
+   "source_date": "Nov-15-2026 08:47:26 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xcab044b301d94875ac1502b73e54d63b0162c70f",
+   "chain": "ethereum",
+   "exchange": "XT.com",
+   "label": "XT.com 7",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xcab044b301d94875ac1502b73e54d63b0162c70f",
+   "source_date": "Nov-15-2026 08:48:06 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xde65ff89287c1a8da978d4c6b31edc3fc664f019",
+   "chain": "ethereum",
+   "exchange": "XT.com",
+   "label": "XT.com 15",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xde65ff89287c1a8da978d4c6b31edc3fc664f019",
+   "source_date": "Nov-15-2026 08:48:25 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xe0a616c3659be29567e08819772e6905307adf21",
+   "chain": "ethereum",
+   "exchange": "XT.com",
+   "label": "XT.com 2",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xe0a616c3659be29567e08819772e6905307adf21",
+   "source_date": "Nov-15-2026 08:48:34 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xe5b8ff1ca1c3ef2ac704783d6473ee5a9be7e02d",
+   "chain": "ethereum",
+   "exchange": "XT.com",
+   "label": "XT.com 6",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xe5b8ff1ca1c3ef2ac704783d6473ee5a9be7e02d",
+   "source_date": "Nov-15-2026 08:48:52 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xea04c61512eb2ef00a7ac89fb812c66b7118b60d",
+   "chain": "ethereum",
+   "exchange": "XT.com",
+   "label": "XT.com 16",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xea04c61512eb2ef00a7ac89fb812c66b7118b60d",
+   "source_date": "Nov-15-2026 08:48:56 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xefda0cb780a8564903285ed25df3cc024f3b2982",
+   "chain": "ethereum",
+   "exchange": "XT.com",
+   "label": "XT.com: Hot Wallet",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0xefda0cb780a8564903285ed25df3cc024f3b2982",
+   "source_date": "Nov-15-2026 08:49:13 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x260ee8f2b0c167e0cd6119b2df923fd061dc1093",
+   "chain": "ethereum",
+   "exchange": "YouHodler",
+   "label": "YouHodler",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x260ee8f2b0c167e0cd6119b2df923fd061dc1093",
+   "source_date": "Nov-15-2026 09:35:29 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x2f1f7fc76e6cf5ab3e186a2a2fd4fc31952a77cc",
+   "chain": "ethereum",
+   "exchange": "YouHodler",
+   "label": "YouHodler 1",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://etherscan.io/address/0x2f1f7fc76e6cf5ab3e186a2a2fd4fc31952a77cc",
+   "source_date": "Nov-15-2026 09:35:34 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x2b3bf74b29f59fb8dda41cf3d6a8da28cf8e7921",
+   "chain": "polygon",
+   "exchange": "BingX",
+   "label": "BingX 29",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x2b3bf74b29f59fb8dda41cf3d6a8da28cf8e7921",
+   "source_date": "Nov-15-2026 08:50:47 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x2b9287402e077f866a067176217ee6ec0e24e4cc",
+   "chain": "polygon",
+   "exchange": "BingX",
+   "label": "BingX 47",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x2b9287402e077f866a067176217ee6ec0e24e4cc",
+   "source_date": "Nov-15-2026 08:50:50 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x406c22b8740ae955b04fd11c2061e053807e2a69",
+   "chain": "polygon",
+   "exchange": "BingX",
+   "label": "BingX 9",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x406c22b8740ae955b04fd11c2061e053807e2a69",
+   "source_date": "Nov-15-2026 08:51:00 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x47dd7b40346037d7ca47d45e40c66a2f351edb20",
+   "chain": "polygon",
+   "exchange": "BingX",
+   "label": "BingX 43",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x47dd7b40346037d7ca47d45e40c66a2f351edb20",
+   "source_date": "Nov-15-2026 08:51:03 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x6c69fa64ec451b1bc5b5fbaa56cf648a281634be",
+   "chain": "polygon",
+   "exchange": "BingX",
+   "label": "BingX 15",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x6c69fa64ec451b1bc5b5fbaa56cf648a281634be",
+   "source_date": "Nov-15-2026 08:51:16 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x74b0e133bee3384dfcfa60b31d85d8e2062de811",
+   "chain": "polygon",
+   "exchange": "BingX",
+   "label": "BingX 40",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x74b0e133bee3384dfcfa60b31d85d8e2062de811",
+   "source_date": "Nov-15-2026 08:51:23 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x766182bfa8b8790d61c4d7e7912c1c3a6f42cef6",
+   "chain": "polygon",
+   "exchange": "BingX",
+   "label": "BingX 3",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x766182bfa8b8790d61c4d7e7912c1c3a6f42cef6",
+   "source_date": "Nov-15-2026 08:51:27 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xa0fca8fa8e9c6aa77305f94be0e03908d0a42900",
+   "chain": "polygon",
+   "exchange": "BingX",
+   "label": "BingX 5",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0xa0fca8fa8e9c6aa77305f94be0e03908d0a42900",
+   "source_date": "Nov-15-2026 08:51:37 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xa88f86e5685fca7c5d6de0e4d944875b007137b5",
+   "chain": "polygon",
+   "exchange": "BingX",
+   "label": "BingX 8",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0xa88f86e5685fca7c5d6de0e4d944875b007137b5",
+   "source_date": "Nov-15-2026 08:51:45 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xaf1e33f8153f25e304dec5cb544b5b6ccc5520ed",
+   "chain": "polygon",
+   "exchange": "BingX",
+   "label": "BingX 23",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0xaf1e33f8153f25e304dec5cb544b5b6ccc5520ed",
+   "source_date": "Nov-15-2026 08:51:48 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xc3dcd744db3f114f0edf03682b807b78a227bf74",
+   "chain": "polygon",
+   "exchange": "BingX",
+   "label": "BingX 10",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0xc3dcd744db3f114f0edf03682b807b78a227bf74",
+   "source_date": "Nov-15-2026 08:51:58 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xc4334a9af50c80a12c484de643149f6159bdd110",
+   "chain": "polygon",
+   "exchange": "BingX",
+   "label": "BingX 4",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0xc4334a9af50c80a12c484de643149f6159bdd110",
+   "source_date": "Nov-15-2026 08:52:04 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xcb95ca610c91629c835b129355999b7acdc4cc06",
+   "chain": "polygon",
+   "exchange": "BingX",
+   "label": "BingX 28",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0xcb95ca610c91629c835b129355999b7acdc4cc06",
+   "source_date": "Nov-15-2026 08:52:10 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xd38cf87f114f2a0582c329fb9df4f7044ce71330",
+   "chain": "polygon",
+   "exchange": "BingX",
+   "label": "BingX 26",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0xd38cf87f114f2a0582c329fb9df4f7044ce71330",
+   "source_date": "Nov-15-2026 08:52:14 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xda43c54ce5083885f561e05fd6220b7096be246c",
+   "chain": "polygon",
+   "exchange": "BingX",
+   "label": "BingX 2",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0xda43c54ce5083885f561e05fd6220b7096be246c",
+   "source_date": "Nov-15-2026 08:52:17 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xe4516477adacc6682cf18069475f676a5b5667f9",
+   "chain": "polygon",
+   "exchange": "BingX",
+   "label": "BingX 14",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0xe4516477adacc6682cf18069475f676a5b5667f9",
+   "source_date": "Nov-15-2026 08:52:32 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xef317e433b0836f294866d43f67d6871b609b351",
+   "chain": "polygon",
+   "exchange": "BingX",
+   "label": "BingX 39",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0xef317e433b0836f294866d43f67d6871b609b351",
+   "source_date": "Nov-15-2026 08:52:41 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x0e80abb31ace45ae26f9a2943acaab72e77de9be",
+   "chain": "polygon",
+   "exchange": "LBank",
+   "label": "LBank 5",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x0e80abb31ace45ae26f9a2943acaab72e77de9be",
+   "source_date": "Nov-15-2026 08:50:14 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x120051a72966950b8ce12eb5496b5d1eeec1541b",
+   "chain": "polygon",
+   "exchange": "LBank",
+   "label": "LBank: Hot Wallet 3",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x120051a72966950b8ce12eb5496b5d1eeec1541b",
+   "source_date": "Nov-15-2026 08:50:23 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x22f83e4b9cb95cb99b88e8f4f15ea598c74c2788",
+   "chain": "polygon",
+   "exchange": "LBank",
+   "label": "LBank 1",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x22f83e4b9cb95cb99b88e8f4f15ea598c74c2788",
+   "source_date": "Nov-15-2026 08:50:30 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x25b63c988310de90031b84975ae13a6015ca6a16",
+   "chain": "polygon",
+   "exchange": "LBank",
+   "label": "LBank 8",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x25b63c988310de90031b84975ae13a6015ca6a16",
+   "source_date": "Nov-15-2026 08:50:35 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xec174c25bba7359b56fd672c8899664121e7dbcf",
+   "chain": "polygon",
+   "exchange": "LBank",
+   "label": "LBank 7",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0xec174c25bba7359b56fd672c8899664121e7dbcf",
+   "source_date": "Nov-15-2026 08:52:38 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xbc4e4069b1cb2fc1256a2bf454ae3affb4e05a4d",
+   "chain": "polygon",
+   "exchange": "LCX",
+   "label": "LCX Exchange",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0xbc4e4069b1cb2fc1256a2bf454ae3affb4e05a4d",
+   "source_date": "Nov-15-2026 09:19:16 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x8c8d7c46219d9205f056f28fee5950ad564d7465",
+   "chain": "polygon",
+   "exchange": "Mercuryo",
+   "label": "mercuryo",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x8c8d7c46219d9205f056f28fee5950ad564d7465",
+   "source_date": "Nov-15-2026 09:35:44 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x0b5c4a7fcda49e0a8661419bb55b86161a86db2a",
+   "chain": "polygon",
+   "exchange": "MoonPay",
+   "label": "MoonPay 5",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x0b5c4a7fcda49e0a8661419bb55b86161a86db2a",
+   "source_date": "Nov-15-2026 09:18:01 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x1440ec793ae50fa046b95bfeca5af475b6003f9e",
+   "chain": "polygon",
+   "exchange": "MoonPay",
+   "label": "MoonPay 2",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x1440ec793ae50fa046b95bfeca5af475b6003f9e",
+   "source_date": "Nov-15-2026 09:18:06 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x151b381058f91cf871e7ea1ee83c45326f61e96d",
+   "chain": "polygon",
+   "exchange": "MoonPay",
+   "label": "MoonPay 4",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x151b381058f91cf871e7ea1ee83c45326f61e96d",
+   "source_date": "Nov-15-2026 09:18:09 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x22f6cc8738308a8c92a6a71ea67832463d1fec0d",
+   "chain": "polygon",
+   "exchange": "MoonPay",
+   "label": "MoonPay 8",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x22f6cc8738308a8c92a6a71ea67832463d1fec0d",
+   "source_date": "Nov-15-2026 09:18:25 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x7afc12c8dd2e6591581d95586eb2c2a4905a12a9",
+   "chain": "polygon",
+   "exchange": "MoonPay",
+   "label": "MoonPay 7",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x7afc12c8dd2e6591581d95586eb2c2a4905a12a9",
+   "source_date": "Nov-15-2026 09:18:57 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xd108fd0e8c8e71552a167e7a44ff1d345d233ba6",
+   "chain": "polygon",
+   "exchange": "MoonPay",
+   "label": "MoonPay 3",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0xd108fd0e8c8e71552a167e7a44ff1d345d233ba6",
+   "source_date": "Nov-15-2026 09:19:30 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xd42f958e1c3e2a10e5d66343c4c9a57726e5b4b6",
+   "chain": "polygon",
+   "exchange": "MoonPay",
+   "label": "MoonPay 6",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0xd42f958e1c3e2a10e5d66343c4c9a57726e5b4b6",
+   "source_date": "Nov-15-2026 09:19:32 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x17f1a51da68d27c94d2a51d92b27b5bd4718b986",
+   "chain": "polygon",
+   "exchange": "Paxful",
+   "label": "Paxful 1",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x17f1a51da68d27c94d2a51d92b27b5bd4718b986",
+   "source_date": "Nov-15-2026 09:18:16 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x777d4627e31863b2a49e2985af46525f21a9846c",
+   "chain": "polygon",
+   "exchange": "Paxful",
+   "label": "Paxful 3",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x777d4627e31863b2a49e2985af46525f21a9846c",
+   "source_date": "Nov-15-2026 09:18:51 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x35d2d03607b9155b42cf673102fe58251ac4f644",
+   "chain": "polygon",
+   "exchange": "Phemex",
+   "label": "Phemex 3",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x35d2d03607b9155b42cf673102fe58251ac4f644",
+   "source_date": "Nov-15-2026 08:50:57 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x50be13b54f3eebbe415d20250598d81280e56772",
+   "chain": "polygon",
+   "exchange": "Phemex",
+   "label": "Phemex",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x50be13b54f3eebbe415d20250598d81280e56772",
+   "source_date": "Nov-15-2026 08:51:10 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xdba24f19bce0f32ea4273faea7c01d7f9d4f91d6",
+   "chain": "polygon",
+   "exchange": "ProBit Global",
+   "label": "ProBit 4",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0xdba24f19bce0f32ea4273faea7c01d7f9d4f91d6",
+   "source_date": "Nov-15-2026 09:19:36 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x63dfe4e34a3bfc00eb0220786238a7c6cef8ffc4",
+   "chain": "polygon",
+   "exchange": "WOO X",
+   "label": "WOO X",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x63dfe4e34a3bfc00eb0220786238a7c6cef8ffc4",
+   "source_date": "Nov-15-2026 09:18:45 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xe505bf08c03cc0fa4e0fdfa2487e2c11085b3fd9",
+   "chain": "polygon",
+   "exchange": "WOO X",
+   "label": "Woo X 3",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0xe505bf08c03cc0fa4e0fdfa2487e2c11085b3fd9",
+   "source_date": "Nov-15-2026 09:19:42 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x104703893f56243c0e56441a99eb3f32e1ed6ad2",
+   "chain": "polygon",
+   "exchange": "XT.com",
+   "label": "XT.com 2",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x104703893f56243c0e56441a99eb3f32e1ed6ad2",
+   "source_date": "Nov-15-2026 08:50:18 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0xcab044b301d94875ac1502b73e54d63b0162c70f",
+   "chain": "polygon",
+   "exchange": "XT.com",
+   "label": "XT.com : Hot Wallet",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0xcab044b301d94875ac1502b73e54d63b0162c70f",
+   "source_date": "Nov-15-2026 08:52:06 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  },
+  {
+   "address": "0x2f1f7fc76e6cf5ab3e186a2a2fd4fc31952a77cc",
+   "chain": "polygon",
+   "exchange": "YouHodler",
+   "label": "YouHodler 1",
+   "type": "exchange_wallet",
+   "kind": "exchange wallet (EOA), per the explorer's public name tag",
+   "source": "https://polygonscan.com/address/0x2f1f7fc76e6cf5ab3e186a2a2fd4fc31952a77cc",
+   "source_date": "Nov-15-2026 09:35:33 PM (UTC)",
+   "retrieved_on": "2026-11-15"
+  }
+ ]
+}

@@ -4,8 +4,8 @@
 - **Issue**: #214
 - **Branch**: `feat/ncrp-number-check` (#218), `feat/cfcfrms-crypto-summary` (server, stacked on #218), `feat/cfcfrms-crypto-summary-page` (the case page, stacked on that)
 - **Current**: nobody
-- **Last worked on**: Sidhyarth, 2026-11-15
-- **Status**: merged in #218 (with the summary server and page PRs, #219 and #220) on 2026-11-15; the summary is behind `EXCHEQUER_SOP_SUMMARY` (off)
+- **Last worked on**: Sidhyarth, 2026-11-16 (status after merge)
+- **Status**: merged in #218 (with the summary server and page PRs, #219 and #220) on 2026-11-15; the summary is behind `EXCHEQUER_SOP_SUMMARY` (off). 16 Nov: the SOP steps checklist merged in #327 (`272dc620`, behind `EXCHEQUER_SOP_STEPS`, off) and the cybercrime.gov.in and 1930 links in #341 (`daaf3b4c`, behind `EXCHEQUER_SOP_SUMMARY`, off)
 
 ## Done
 
@@ -51,7 +51,7 @@ Quote check of 15 Nov 2026, against the rendered pages (the bank copy's text lay
 3. Later options from the research:
    - SOP deadlines in the asset register (90-day hold, 15-day grievance decision, 2-day bank reply, 1-week KYC update): done in #230 (`docs/handoff/sop-deadlines.md`), behind `EXCHEQUER_SOP_DEADLINES` (off)
    - reading an NCRP complaint PDF the officer already has (needs redacted samples)
-   - deep links to cybercrime.gov.in and 1930
+   - links to cybercrime.gov.in and 1930: done, on the officers' complaint page, merged in #341 (`daaf3b4c`, `docs/handoff/ncrp-portal-links.md`), behind `EXCHEQUER_SOP_SUMMARY` (off). Source: I4C (MHA), https://i4c.mha.gov.in/ncrp.aspx, read 16.11.2026. Only the portal's home page: no published address opens one complaint, so no deep link.
 
 ## Open questions (owner)
 

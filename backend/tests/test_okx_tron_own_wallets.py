@@ -173,6 +173,43 @@ def test_a_trx_transfer_is_read_from_its_hex_parties_and_a_failed_one_is_not():
     assert clf.trx_transfers([tx("SUCCESS")], SEED, "in") == []
 
 
+def _usdt(sender, receiver):
+    return {"token_info": {"address": clf.USDT}, "type": "Transfer", "value": "5000000",
+            "from": sender, "to": receiver, "block_timestamp": 1_700_000_000_000}
+
+
+def _metrics(address, sent, got, okx):
+    return {**_reads(), "usdt_out": clf.summarise(clf.usdt_transfers(sent, address, "out"), "to", okx),
+            "usdt_in": clf.summarise(clf.usdt_transfers(got, address, "in"), "from", okx)}
+
+
+def test_a_por_address_sending_to_itself_is_no_flow_with_an_okx_wallet():
+    address = _busiest()  # a PoR address, so it is itself "an OKX wallet"
+    okx = {address, clf.HOT_WALLET_8}
+    payouts = [_usdt(address, f"payee-{i}") for i in range(clf.MIN_PAYEES + 10)]  # placeholders, not addresses
+    alone = _metrics(address, [*payouts, _usdt(address, address)], [_usdt(address, address)], okx)
+    assert alone["usdt_out"]["distinct_okx"] == 0 and alone["usdt_in"]["n"] == 0
+    assert clf.classify(alone) == (clf.UNCLASSIFIED, "no flow both ways with an OKX wallet in what was read")
+    # The rule still fires with a real flow each way with another OKX wallet.
+    both = _metrics(address, [*payouts, _usdt(address, clf.HOT_WALLET_8)], [_usdt(clf.HOT_WALLET_8, address)], okx)
+    assert clf.classify(both)[0] == clf.OWN
+
+
+def test_a_trx_transfer_to_itself_is_not_read():
+    value = {"owner_address": encode_address(SEED).hex(), "to_address": encode_address(SEED).hex(), "amount": 7}
+    row = {"raw_data": {"contract": [{"type": "TransferContract", "parameter": {"value": value}}]},
+           "ret": [{"contractRet": "SUCCESS"}], "block_timestamp": 1}
+    assert clf.trx_transfers([row], SEED, "out") == [] and clf.trx_transfers([row], SEED, "in") == []
+
+
+def test_no_recorded_read_has_a_self_transfer_so_no_class_changes():
+    # Every recorded address is in the PoR file, so a self-transfer would show as itself in okx_counts.
+    for address, reads in READS.items():
+        assert reads["in_por"], address
+        for side in ("usdt_out", "usdt_in", "trx_out", "trx_in"):
+            assert address not in reads[side]["okx_counts"], (address, side)
+
+
 # -- no collision ------------------------------------------------------------------------
 
 def test_no_row_hides_a_freeze_a_sanction_a_demo_or_a_test_wallet():
@@ -257,11 +294,27 @@ def test_one_sweep_or_a_sweep_into_an_unlabelled_wallet_is_still_not_inferred():
     assert infer_deposit_addresses(_sweeps_into(left_out), MATCHER, native_symbol="TRX", asset="USDT") == []
 
 
-def test_the_tronscan_seeder_never_replaces_or_drops_one_of_these_rows():
+def test_the_tronscan_seeder_never_replaces_one_of_these_rows_with_a_tag():
     address = _busiest()
     kept = {address: {"exchange": "OKX", "label": "OKX 3", "type": "hot_wallet"}}
-    keep_previous(kept, {address: LABELS[address]}, dropped={address})
+    assert keep_previous(kept, {address: LABELS[address]}, dropped=set()) == 1
     assert kept[address] == LABELS[address]
     kept = {}
-    keep_previous(kept, {address: LABELS[address]}, dropped={address})
+    assert keep_previous(kept, {address: LABELS[address]}, dropped=set()) == 1
     assert kept[address] == LABELS[address]
+
+
+def test_the_tronscan_seeder_drops_one_of_these_rows_once_its_tag_is_not_an_exchange():
+    # Exchequer classed these rows itself (only the PoR listing is OKX's), so a
+    # wrongly classed wallet must still be removable by re-seeding.
+    address = _busiest()
+    kept: dict = {}
+    assert keep_previous(kept, {address: LABELS[address]}, dropped={address}) == 0 and kept == {}
+
+
+def test_re_seeding_on_the_shipped_file_changes_no_row():
+    # Offline dry run of the fold: the not-exchange list the last run recorded drops nothing shipped.
+    dropped = {line.split()[0] for line in DOCUMENT["_meta"]["excluded_not_exchange"]}
+    assert not dropped & set(_rows())
+    kept: dict = {}
+    assert keep_previous(kept, LABELS, dropped) == len(LABELS) and kept == LABELS

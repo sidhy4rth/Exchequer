@@ -1,0 +1,56 @@
+{
+ "_meta": {
+  "address": "TMG95kirH4cKW5GnKoCcCye1dBqbt77yGu",
+  "who": "MinerGate (SR), as TronScan names it; not a label in Exchequer's sense",
+  "source_of_address": "TronScan's Super Representative list (apilist.tronscanapi.com/api/pagewitness?witnesstype=0, read keyless 2026-11-16T10:41Z)",
+  "why_chosen": "Stake 2.0 own stake for bandwidth, Stake 2.0 stake delegated out for bandwidth and for energy",
+  "trongrid": {
+   "request": "https://api.trongrid.io/v1/accounts/TMG95kirH4cKW5GnKoCcCye1dBqbt77yGu",
+   "fetched_at": "2026-11-16T10:42:22Z",
+   "key": "none",
+   "sha256_full_answer": "7fcc6631f1ab475c7df7221e8c15ae1bc5f76a2343d5e1cb77433388bcc9f7ee",
+   "sha256_note": "of the whole answer as received, re-serialised with sorted keys and no spaces",
+   "trimmed": "only the fields custody_balance reads, the acquired_* (delegated-in) fields it must leave out, allowance, is_witness and latest_opration_time are kept; trc20, assetV2, permissions, votes and usage counters are dropped"
+  },
+  "tronscan": {
+   "page": "https://tronscan.org/#/address/TMG95kirH4cKW5GnKoCcCye1dBqbt77yGu",
+   "as_at_utc": "2026-11-16 10:43",
+   "trx_available": "0.304661",
+   "trx_staked": "6,975,373",
+   "trx_total": "6,975,373.304661",
+   "rewards_shown_separately": "Claimable Rewards for SR: 259,255.305835 TRX",
+   "read": "account page in a browser, keyless; TronScan's account APIs (api/accountv2, api/account/tokens) answered 401 without a key"
+  }
+ },
+ "trongrid_answer": {
+  "data": [
+   {
+    "address": "417bdd2efb4401c50b6ad255e6428ba688e0b83f81",
+    "balance": 304661,
+    "frozenV2": [
+     {
+      "amount": 1551000000
+     },
+     {
+      "type": "ENERGY"
+     },
+     {
+      "type": "TRON_POWER"
+     }
+    ],
+    "delegated_frozenV2_balance_for_bandwidth": 848251000000,
+    "allowance": 259243143366,
+    "is_witness": true,
+    "latest_opration_time": 1793361477000,
+    "account_resource": {
+     "delegated_frozenV2_balance_for_energy": 6125571000000
+    }
+   }
+  ],
+  "success": true,
+  "meta": {
+   "at": 1794825743287,
+   "page_size": 1
+  }
+ }
+}

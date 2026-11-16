@@ -1,0 +1,62 @@
+{
+ "_meta": {
+  "address": "TAuUCiH4JVNBZmDnEDZkXEUXDARdGpXTmX",
+  "who": "HTX-Cold 6, as TronScan names it; not a label in Exchequer's sense",
+  "source_of_address": "data/exchange_labels_tron.json (HTX proof-of-reserves, por:htx:2026-11)",
+  "why_chosen": "Stake 2.0 stake being unstaked (unfrozenV2, bandwidth and energy, unfreeze time already passed), stake delegated in for energy",
+  "trongrid": {
+   "request": "https://api.trongrid.io/v1/accounts/TAuUCiH4JVNBZmDnEDZkXEUXDARdGpXTmX",
+   "fetched_at": "2026-11-16T10:42:31Z",
+   "key": "none",
+   "sha256_full_answer": "282e9fec49c507cc1bb1981ece3f17277fd8e5073b8806ec4f06f48c197dc150",
+   "sha256_note": "of the whole answer as received, re-serialised with sorted keys and no spaces",
+   "trimmed": "only the fields custody_balance reads, the acquired_* (delegated-in) fields it must leave out, allowance, is_witness and latest_opration_time are kept; trc20, assetV2, permissions, votes and usage counters are dropped"
+  },
+  "tronscan": {
+   "page": "https://tronscan.org/#/address/TAuUCiH4JVNBZmDnEDZkXEUXDARdGpXTmX",
+   "as_at_utc": "2026-11-16 10:44",
+   "trx_available": "755,759,959.026665",
+   "trx_staked": "31,000,000",
+   "trx_total": "786,759,959.026665",
+   "rewards_shown_separately": "Unclaimed Voting Rewards: 0 TRX",
+   "read": "account page in a browser, keyless; TronScan's account APIs (api/accountv2, api/account/tokens) answered 401 without a key"
+  }
+ },
+ "trongrid_answer": {
+  "data": [
+   {
+    "address": "410a4326a9bc1564c2d315146cd0b721b351cb90a3",
+    "balance": 755759959026665,
+    "frozenV2": [
+     {},
+     {
+      "type": "ENERGY"
+     },
+     {
+      "type": "TRON_POWER"
+     }
+    ],
+    "unfrozenV2": [
+     {
+      "unfreeze_amount": 30000000000000,
+      "type": "ENERGY",
+      "unfreeze_expire_time": 1779367515000
+     },
+     {
+      "unfreeze_amount": 1000000000000,
+      "unfreeze_expire_time": 1779367527000
+     }
+    ],
+    "latest_opration_time": 1778221905000,
+    "account_resource": {
+     "acquired_delegated_frozenV2_balance_for_energy": 1000000
+    }
+   }
+  ],
+  "success": true,
+  "meta": {
+   "at": 1794825751960,
+   "page_size": 1
+  }
+ }
+}

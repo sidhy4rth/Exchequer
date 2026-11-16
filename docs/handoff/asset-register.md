@@ -30,8 +30,9 @@
 ## Next
 
 1. Record one asset on the live site and check the home card.
-2. Later: a "custody wallet" check that reads the custody address's balance on chain and flags a mismatch with the register (feature 9, part 2).
+2. Done (see below): a "custody wallet" check that reads the custody address's balance on chain and flags a mismatch with the register (feature 9, part 2).
    - 15 Nov: feature 9's custody wallets merged, by Sidhyarth (issue #128), behind `EXCHEQUER_CUSTODY_WALLETS` (off): records #129, signing log #139, panel #140, procedure #142. They link custody wallets to this register's rows but do not read balances on chain, so this check is still to do.
+   - Done 16 Nov, by Sidhyarth (issue #332): the balance check merged in #333 (`0b94ef60`), #344 (`863d39f4`) and #345 (`cc093397`), behind `EXCHEQUER_CUSTODY_BALANCE_CHECK` (off); see `docs/handoff/custody-balance-check.md`.
 3. Done 14 Nov, by Sidhyarth: #174 (issue #171) refuses an amount longer than its 48-character column with a 400 instead of a 500.
 
 ## Open questions

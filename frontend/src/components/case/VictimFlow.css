@@ -114,8 +114,13 @@
 
 /* The lights: x runs straight across, y eases by the ribbons' own curve, so
    each light rides the middle of its ribbons. */
-.vf-lights { position: absolute; inset: 0; pointer-events: none; }
-.vf-light { position: absolute; left: 0; top: 0; width: 100%; height: 0; opacity: 0; color: var(--text-2); }
+/* Each light is a stage-wide box that translateX moves, its dot at the box's
+   left edge, so the rest of the box runs past the chart: the layer clips it,
+   or the page scrolls sideways (#377). The layer reaches 16px past the stage
+   for a dot's glow at the edges, and each light starts 16px in, so it spans
+   the stage exactly and the dots ride where they always did. */
+.vf-lights { position: absolute; inset: -16px; overflow: hidden; pointer-events: none; }
+.vf-light { position: absolute; left: 16px; top: 16px; width: calc(100% - 32px); height: 0; opacity: 0; color: var(--text-2); }
 .vf-light.go { color: var(--go); }
 .vf-light > span { position: absolute; left: 0; top: 0; }
 .vf-light i { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px 2px color-mix(in srgb, currentColor 40%, transparent); }

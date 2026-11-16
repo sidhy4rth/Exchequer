@@ -40,6 +40,11 @@
    or the label store with an exchange-wallet category. Then run the importer with `--file por:okx:2026-11=<zip>`
    writing to that store instead. Dry run on 15 Nov: on-chain spot check 149 of 149 active (1 no answer); 5 left
    out because they appear in `recorded_demos.json` (re-record that demo when OKX is imported).
+   Storage decided (15 Nov): exchange rows in the label store, [ADR-0011](../adr/0011-exchange-rows-in-the-label-store.md),
+   merged in #223 (`f653c37f`, with #224). The OKX Tron rows ship in the store's exchange rows from release
+   `labels-2026-11-15` (#261, `72847962`), with `EXCHEQUER_STORE_EXCHANGE_ROWS` off; see `docs/flag-rollout.md` for
+   why it stays off and what switching it on needs (re-record demo 9). 10 of OKX's own Tron wallets are labelled in
+   #304 (`c39b7e8e`) and the 5 held back in #308 (`c9f723bf`).
 2. Bitget, Gate and MEXC: no machine-readable address list found. Bitget's page no longer lists addresses (its
    `queryReserveWalletDetailList` API is unused by the page and refuses guessed parameters); Gate and MEXC answer
    automated clients with a bot check (not bypassed). A person can download each list in a browser and add a

@@ -64,8 +64,8 @@ def test_gambling_sentence_names_the_platform_and_the_request_without_accusing()
                       label="Stake.com deposit address", source="deposit-address expansion",
                       depth=2, value_received_native=150.0)
     text = match.describe("USDT")
-    assert text.startswith("Gambling platform:")
-    assert "Stake.com" in text
+    # The platform is named where the sentence names the wallet's owner.
+    assert text.startswith(f"Gambling platform: {DEPOSIT} is Stake.com deposit address (Stake.com), per ")
     assert "account holder" in text
     assert "not a finding" in text
     assert "Sanctioned" not in text and "sanctioned" not in text
