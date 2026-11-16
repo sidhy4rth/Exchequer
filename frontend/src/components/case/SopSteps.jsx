@@ -34,7 +34,7 @@ export default function SopSteps({ result }) {
       </summary>
       <div className="body ss-body">
         {error && <p className="note" role="alert">{error}</p>}
-        {!data && !error && <p className="note">Loading…</p>}
+        {!data && !error && <p className="note" aria-live="polite">Loading…</p>}
         {data && <>
           <p className="note">{data.note}</p>
           <ol className="ss-list">
