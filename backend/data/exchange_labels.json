@@ -379,7 +379,7 @@
         "OKX": 47
       }
     },
-    "fiu_named_exchanges": "108 wallets of exchanges FIU-IND acted against that had none here (Beldex 1, BingX 45, Bitrue 2, CEX.IO 1, Changelly 1, LBank 15, LCX 2, Mercuryo 1, MoonPay 8, Paxful 3, Phemex 3, ProBit Global 3, WOO X 7, XT.com 14, YouHodler 2) added from data/fiu_named_exchanges.json (15 Nov 2026 UTC; batch 1 #342, batch 2 #354, batch 3 #358), which records each one's source (the explorer's public name tag on the address's page) and what was left out and why."
+    "fiu_named_exchanges": "113 wallets of exchanges FIU-IND acted against that had none here (Beldex 1, BingX 45, Bitrue 2, CEX.IO 1, Changelly 1, LBank 15, LCX 2, Mercuryo 1, MoonPay 8, Paxful 3, Phemex 3, Pionex 5, ProBit Global 3, WOO X 7, XT.com 14, YouHodler 2) added from data/fiu_named_exchanges.json (15 Nov 2026 UTC; batch 1 #342, batch 2 #354, batch 3 #358; batch 4 #360, read 16 Nov 2026 UTC), which records each one's source (the explorer's public name tag on the address's page) and what was left out and why."
   },
   "labels": {
     "0x05f51aab068caa6ab7eeb672f88c180f67f17ec7": {
@@ -128075,6 +128075,16 @@
       "label": "BingX 27",
       "type": "exchange_wallet"
     },
+    "0x28410a70acc5f01e4efe892bcc38b70f3bcf014b": {
+      "exchange": "Pionex",
+      "label": "Pionex 3",
+      "type": "exchange_wallet"
+    },
+    "0x2a8a276019d3ec549ae657c945ef60aab4e33c9b": {
+      "exchange": "Pionex",
+      "label": "Pionex 1",
+      "type": "exchange_wallet"
+    },
     "0x2b3bf74b29f59fb8dda41cf3d6a8da28cf8e7921": {
       "exchange": "BingX",
       "label": "BingX 29",
@@ -128103,6 +128113,11 @@
     "0x4597a8206978c5de22173432b2f0cb899eef9fa3": {
       "exchange": "BingX",
       "label": "BingX 10",
+      "type": "exchange_wallet"
+    },
+    "0x4608fbf5fd78879ba0a75c6c0b0f5e53e188d3e2": {
+      "exchange": "Pionex",
+      "label": "Pionex 4",
       "type": "exchange_wallet"
     },
     "0x474ac5cb62d7acedc9990d4daafa0c39d9478fbb": {
@@ -128183,6 +128198,11 @@
     "0x9bd8135e586161753bee9c3be2b6cdd25ebeb346": {
       "exchange": "BingX",
       "label": "BingX 33",
+      "type": "exchange_wallet"
+    },
+    "0xa008dc1281aa6bff98b2c253ee8fd759ba918103": {
+      "exchange": "Pionex",
+      "label": "Pionex 2",
       "type": "exchange_wallet"
     },
     "0xa0fca8fa8e9c6aa77305f94be0e03908d0a42900": {
@@ -128373,6 +128393,11 @@
     "0xe5a8b35eaa3c14e0a6514f800825e1e6687bf23e": {
       "exchange": "LBank",
       "label": "LBank: Hot Wallet 4",
+      "type": "exchange_wallet"
+    },
+    "0xf6d4e5a7c5215f91f59a95065190cca24bf64554": {
+      "exchange": "Pionex",
+      "label": "Pionex: Hot Wallet",
       "type": "exchange_wallet"
     },
     "0xfa9f7a1cbfbcb688729c522b4f0905ccf4d26d25": {
