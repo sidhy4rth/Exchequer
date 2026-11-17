@@ -9,7 +9,7 @@
 
 [![tests](https://github.com/sidhy4rth/Exchequer/actions/workflows/test.yml/badge.svg)](https://github.com/sidhy4rth/Exchequer/actions/workflows/test.yml)
 [![Live demo](https://img.shields.io/badge/live_demo-render-0B0D0E?logo=render&logoColor=white)](https://exchequer.co.in)
-[![Flagged addresses screened](https://img.shields.io/badge/flagged_addresses_screened-80.55M-C0392B)](https://exchequer.co.in/risk-labels?chain=tron)
+[![Flagged addresses screened](https://img.shields.io/badge/flagged_addresses_screened-88.12M-C0392B)](https://exchequer.co.in/risk-labels?chain=tron)
 ![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
@@ -43,11 +43,11 @@
 
 <table>
 <tr>
-<td align="center"><h3>80.55M</h3>flagged addresses<br>screened live<br><sub>on five chains, counted once per chain:<br>the 80.5M label store and<br>the lists in this repository</sub></td>
-<td align="center"><h3>80.4M</h3>address-poisoning<br>wallets<br><sub>from on-chain scans and published lists, counted once per chain</sub></td>
+<td align="center"><h3>88.12M</h3>flagged addresses<br>screened live<br><sub>on five chains, counted once per chain:<br>the 88.1M label store and<br>the lists in this repository</sub></td>
+<td align="center"><h3>88.0M</h3>address-poisoning<br>wallets<br><sub>from on-chain scans and published lists, counted once per chain</sub></td>
 <td align="center"><h3>26,219</h3>exchange addresses<br><sub>counted once per chain; incl. 24,018 Bitget and Binance<br>customer deposit addresses</sub></td>
 <td align="center"><h3>6</h3>governments' sanctions<br>and seizure lists</td>
-<td align="center"><h3>14,840</h3>addresses a stablecoin<br>issuer has frozen</td>
+<td align="center"><h3>14,911</h3>addresses a stablecoin<br>issuer has frozen</td>
 <td align="center"><h3>100,000+</h3>hack, phishing and<br>scam wallets</td>
 <td align="center"><h3>5</h3>chains, 14 assets</td>
 <td align="center"><h3>3,500+</h3>tests, no network</td>
@@ -99,7 +99,7 @@ score — a conclusion that reaches a courtroom has to be one a human can re-che
 | **Follows the money** | Breadth-first, both directions: *where did it go* and *who paid this wallet*. One asset per trace — ETH, BNB, TRX, USDT or USDC — so every amount in a graph is comparable. |
 | **Names the exchange** | Exact match against 26,219 exchange addresses on five chains (counted once per chain), including **CoinDCX**, **CoinSwitch**, **WazirX** and **Delta Exchange** — and 24,018 per-customer deposit addresses at **Bitget** and **Binance**, each of which names one account. |
 | **Infers the deposit address** | An unlabelled wallet whose every outflow sweeps to one exchange wallet is reported as that exchange's *probable* deposit address — the address a request has to name — and scored lower than a label match. |
-| **Screens every hop** | Against the sanctions and seizure lists of the **US, UK, EU, Israel, Japan and France**; **every address Tether has frozen on USDT**, read from the contract itself; mixer pools (Tornado Cash, Typhoon; privacy protocols such as Privacy Pools are shown as a note, never a stop); wallets tied to hacks (WazirX, Bybit, BingX, Ronin…) and reported phishing; and a **70.9-million-address label store** (counted once per chain): hack proceeds, scams, stablecoin freezes and address-poisoning wallets found by on-chain scans (80.4M address-poisoning wallets with the published lists), each cited with its source, a sample transaction and an evidence tier. |
+| **Screens every hop** | Against the sanctions and seizure lists of the **US, UK, EU, Israel, Japan and France**; **every address Tether has frozen on USDT**, read from the contract itself; mixer pools (Tornado Cash, Typhoon; privacy protocols such as Privacy Pools are shown as a note, never a stop); wallets tied to hacks (WazirX, Bybit, BingX, Ronin…) and reported phishing; and a **88.1-million-address label store** (counted once per chain): hack proceeds, scams, stablecoin freezes and address-poisoning wallets found by on-chain scans (88.0M address-poisoning wallets with the published lists), each cited with its source, a sample transaction and an evidence tier. |
 | **Stops at a mixer** | A mixer pays out from a commingled pool, so the trace ends there and says so instead of manufacturing a trail. |
 | **Flags laundering shapes** | Peel chains and amount splits, as fixed rules that print their thresholds — measured on 88 real wallets, and never allowed to move the score. |
 | **Follows the money through a swap** | A transfer into a known DEX router is read from its receipt; if it came back as USDT or USDC, that stablecoin is traced onward from the moment of the swap, as its own linked trace. |
